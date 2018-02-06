@@ -17,6 +17,6 @@ Evaluate:
 	
 	mesh=ImportMesh["path/to/your_mesh_file"]
 
-![screenshot](https://imgur.com/9sFn2J0 "screenshot")
+![screenshot](https://i.imgur.com/OpzA8J5.png "Quad mesh")
 	
 More information on how to manipulate and visualize `ElementMesh` objects is available in official [documentation](https://reference.wolfram.com/language/FEMDocumentation/tutorial/ElementMeshVisualization.html)
