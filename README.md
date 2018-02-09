@@ -3,6 +3,7 @@ Utilities for importing FEM meshes to Mathematica. Currently supported file form
 
  - .inp (Hypermesh / Abaqus)
  - .msh ([Gmsh](http://gmsh.info/))
+ - .mphtxt ([Comsol](https://www.comsol.com/))
 
 ## Installation
 
