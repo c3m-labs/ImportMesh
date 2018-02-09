@@ -32,7 +32,8 @@ ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a
  should be defined in public context, so they can be found by the other public functions. *)
  (* TODO: Find out a better way to use separate subcontexts for each implementation. *)
 importAbaqusMesh;
-importGmshMesh
+importComsolMesh;
+importGmshMesh;
 
 
 (* ::Section::Closed:: *)
@@ -160,6 +161,128 @@ importAbaqusMesh[file_,scale_:1]:=Module[
 
 
 End[]; (* "`Abaqus`" *)
+
+
+(* ::Subsection::Closed:: *)
+(*Comsol (.mphtxt)*)
+
+
+(* Begin private context *)
+Begin["`Comsol`"];
+
+
+(* ::Subsubsection::Closed:: *)
+(*Helper functions*)
+
+
+getNumber[list_List,key_]:=ToExpression@Flatten@StringCases[list,x__~~key:>x];
+
+
+getPosition[list_List,key_]:=ToExpression@Flatten@Position[list,key]
+
+
+getNodes[list_]:=Module[
+	{noNodes,start,listOfStrings},
+	noNodes=getNumber[list," # number of mesh points"];
+	start=getPosition[list,"# Mesh point coordinates"];
+	listOfStrings=Join@@MapThread[
+		Take[list,{#1+1,#1+#2}]&,
+		{start,noNodes}
+	];
+	Map[
+		Internal`StringToDouble,
+		StringSplit@listOfStrings,
+		{2}
+	]
+]
+
+
+takeLines[list_List,start_Integer,noLines_Integer]:=ToExpression@StringSplit@Take[list,{start+1,start+noLines}]
+
+
+switchType={
+	"vtx"->PointElement,
+	"edg"|"edg2"->LineElement,
+	"tri"|"tri2"->TriangleElement,"quad"|"quad2"->QuadElement,
+	"tet"|"tet2"->TetrahedronElement,"hex"|"hex2"->HexahedronElement
+};
+
+
+modification["quad",nodes_]:=nodes[[{1,2,4,3}]]
+modification["quad2",nodes_]:=nodes[[{1,2,4,3,5,8,9,6}]]
+modification["hex",nodes_]:=nodes[[{1,2,4,3,5,6,8,7}]]
+modification["hex2",nodes_]:=nodes[[{1,2,4,3,5,6,8,7,9,12,13,10,23,26,27,24,14,16,22,20}]]
+modification["tet2",nodes_]:=nodes[[{1,2,3,4,5,7,6,9,10,8}]]
+modification[type_,nodes_]:=nodes
+
+
+getElements[list_,type_,length_,startElement_,startDomain_]:=With[
+	{head=type/.switchType},
+	{
+	head[
+		(* +1 because node counting starts from 0 *)
+		(modification[type,#]&/@takeLines[list,startElement,length])+1,
+		Flatten@takeLines[list,startDomain,length]
+	]
+	}
+]
+
+
+(* ::Subsubsection::Closed:: *)
+(*Main function*)
+
+
+importComsolMesh[file_,scale_:1]:=Module[
+	{list,sdim,nodes,types,lengths,startElements,startMarkers,allElements,point,line,surface,solid},
+	
+	list=ReadList[file,String];
+	sdim=First@getNumber[list," # sdim"];
+	types=Flatten@StringCases[list,Whitespace~~x__~~" # type name":>x];
+	lengths=getNumber[list," # number of elements"];
+	startElements=getPosition[list,"# Elements"];
+	(* I think both "Domains"  and "Geometric entity indices" can be considered as markers. *)
+	startMarkers=getPosition[list,"# Domains"|"# Geometric entity indices"];
+
+	nodes=getNodes[list];
+	allElements=MapThread[
+		getElements[list,#1,#2,#3,#4]&,
+		{types,lengths,startElements,startMarkers}
+	];
+	
+	point=Cases[allElements,PointElement[__],2];
+	line=Cases[allElements,LineElement[__],2];
+	surface=Cases[allElements,TriangleElement[__]|QuadElement[__],2];
+	solid=Cases[allElements,TetrahedronElement[__]|HexahedronElement[__],2];
+		
+	(* If number of dimensions is 3 but no solid elements are specified, 
+	then we use ToBoundaryMesh to create ElementMesh. And similarly for 2 dimensions. *)
+	If[
+		TrueQ[(sdim==3&&solid=={})||(sdim==2&&surface=={})],
+		ToBoundaryMesh[
+			"Coordinates"->scale*nodes,
+			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
+			"PointElements"->point,
+			"CheckIncidentsCompletness"->False,
+			"CheckIntersections"->False,
+			"DeleteDuplicateCoordinates"->False
+		]//Quiet,
+		ToElementMesh[
+			(* "Coordinates" and "MeshElements" are the only required fields. 
+			Order of rules given seems important. Possible bug?  *)
+			"Coordinates"->scale*nodes,
+			"MeshElements"->Switch[sdim,1,line,2,surface,3,solid],
+			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
+			"PointElements"->point,
+			"CheckIncidentsCompletness"->False,
+			"CheckIntersections"->False,
+			"DeleteDuplicateCoordinates"->False
+	]//Quiet
+	]
+]
+
+
+
+End[]; (* "`Comsol`" *)
 
 
 (* ::Subsection::Closed:: *)
@@ -316,6 +439,7 @@ ImportMesh[file_,opts:OptionsPattern[]]:=Module[
 	Switch[
 		FileExtension[file],
 		"inp",importAbaqusMesh[file,scale],
+		"mphtxt",importComsolMesh[file,scale],
 		"msh",importGmshMesh[file,scale],
 		_,Message[ImportMesh::nosup];$Failed
 	]
