@@ -1,22 +1,21 @@
 # ImportMesh
 Utilities for importing FEM meshes to Mathematica. Currently supported file formats:
 
- - .inp (Hypermesh / Abaqus)
+ - .inp ([Hypermesh](https://www.altairhyperworks.com/product/HyperMesh) / Abaqus)
  - .msh ([Gmsh](http://gmsh.info/))
  - .mphtxt ([Comsol](https://www.comsol.com/))
 
 ## Installation
 
-Download `ImportMesh.wl` file and place it to the folder that you get by evaluating 
-`SystemOpen@FileNameJoin[{$UserBaseDirectory, "Applications"}]` in Mathematica.
+Download `ImportMesh.zip` file from [the releases page](https://github.com/c3m-labs/ImportMesh/releases) and extract it to the folder that you get by evaluating 
+`SystemOpen@FileNameJoin[{$UserBaseDirectory, "Applications"}]` in Mathematica. Then load the package by evaluating `Get["ImportMesh`"]`.
 
 ## Usage
 
-Evaluate:
+The only (currently) avaliable function is  `ImportMesh`. It creates `ElementMesh` object from a text file:
 
-    Get["ImportMesh`"]
-	
-	mesh=ImportMesh["path/to/your_mesh_file"]
+    mesh=ImportMesh["path/to/your_mesh_file"];
+    mesh["Wireframe"]
 
 ![screenshot](https://i.imgur.com/OpzA8J5.png "Quad mesh")
 	
