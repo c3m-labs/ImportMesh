@@ -8,7 +8,7 @@ Utilities for importing FEM meshes to Mathematica. Currently supported file form
 ## Installation
 
 Download `ImportMesh.zip` file from [the releases page](https://github.com/c3m-labs/ImportMesh/releases) and extract it to the folder that you get by evaluating 
-`SystemOpen@FileNameJoin[{$UserBaseDirectory, "Applications"}]` in Mathematica. Then load the package by evaluating `Get["ImportMesh`"]`.
+`SystemOpen@FileNameJoin[{$UserBaseDirectory, "Applications"}]` in Mathematica. Then load the package by evaluating ``Get["ImportMesh`"]``.
 
 ## Usage
 
