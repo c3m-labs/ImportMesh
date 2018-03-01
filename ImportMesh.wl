@@ -34,6 +34,7 @@ ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a
 importAbaqusMesh;
 importComsolMesh;
 importGmshMesh;
+importElfenMesh;
 
 
 (* ::Section::Closed:: *)
@@ -420,6 +421,138 @@ End[]; (* "`Gmsh`" *)
 
 
 (* ::Subsection::Closed:: *)
+(*Elfen (.mes)*)
+
+
+(* Begin private context *)
+Begin["`Elfen`"];
+
+
+(* ::Subsubsection::Closed:: *)
+(*Helper functions*)
+
+
+getPosition[list_List,key_]:=ToExpression@Flatten@Position[list,key]
+
+
+getTypes[list_]:=Module[
+	{start,n},
+	start=First@getPosition[list,"element_type_numbers"];
+	n=ToExpression@list[[start+1]];
+	
+	ToExpression/@list[[start+2;;start+1+n]]
+]
+
+
+getNodes[list_]:=Module[
+	{start,dim,n},
+	(* We assume all nodes are listed only on one place in the file. *)
+	start=First@getPosition[list,"coordinates"];
+	dim=ToExpression@list[[start+1]];
+	n=ToExpression@list[[start+2]];
+	
+	Partition[
+		Internal`StringToDouble/@list[[start+3;;start+3+(n*dim)-1]],
+		dim
+	]
+]
+
+
+$ElfenTypes={
+21->TriangleElement,
+22->QuadElement,
+23->TriangleElement,
+31->TetrahedronElement,
+33->HexahedronElement,
+34->TetrahedronElement,
+36->HexahedronElement
+};
+
+
+processElements[list_,startLine_Integer,type_Integer]:=Module[
+	{nNodes,nElms,connectivity,head},
+	
+	nNodes=ToExpression@list[[startLine+1]];
+	nElms=ToExpression@list[[startLine+2]];
+	
+	connectivity=Partition[
+		ToExpression/@list[[startLine+3;;startLine+3+(nNodes*nElms)-1]],
+		nNodes
+	];
+	head=type/.$ElfenTypes;
+	
+	head[connectivity]
+]
+
+
+getElements[list_]:=Module[
+	{startPositions,types},
+	
+	startPositions=getPosition[list,"element_topology"];
+	types=getTypes[list];
+	
+	MapThread[
+		processElements[list,#1,#2]&,
+		{startPositions,types}
+	]
+]
+
+
+(* ::Subsubsection::Closed:: *)
+(*Main function*)
+
+
+importElfenMesh::msg="`1`";
+
+importElfenMesh[file_,scale_:1]:=Module[
+	{list,nodes,sdim,markers,allElements,point,line,surface,solid},
+	
+	list=ReadList[file,
+		Word,
+		RecordLists->True,
+		RecordSeparators -> {"#","\"","{","}","*","\n"}
+	]//Flatten;
+	nodes=getNodes[list];
+	sdim=Last@Dimensions[nodes];
+	allElements=getElements[list];
+		
+	point=Cases[allElements,PointElement[__],2];
+	line=Cases[allElements,LineElement[__],2];
+	surface=Cases[allElements,TriangleElement[__]|QuadElement[__],2];
+	solid=Cases[allElements,TetrahedronElement[__]|HexahedronElement[__],2];
+	
+	(* If number of dimensions is 3 but no solid elements are specified, 
+	then we use ToBoundaryMesh to create ElementMesh. And similarly for 2 dimensions. *)
+	If[
+		TrueQ[(sdim==3&&solid=={})||(sdim==2&&surface=={})],
+		ToBoundaryMesh[
+			"Coordinates"->nodes,
+			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
+			"PointElements"->point,
+			"CheckIncidentsCompletness"->False,
+			"CheckIntersections"->False,
+			"DeleteDuplicateCoordinates"->False
+		]//Quiet
+		,
+		ToElementMesh[
+			(* "Coordinates" and "MeshElements" are the only required fields. 
+			Order of rules given seems important. Possible bug?  *)
+			"Coordinates"->nodes,
+			"MeshElements"->Switch[sdim,1,line,2,surface,3,solid],
+			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
+			"PointElements"->point,
+			"CheckIncidentsCompletness"->False,
+			"CheckIntersections"->False,
+			"DeleteDuplicateCoordinates"->False
+	]//Quiet
+	]
+]
+
+
+End[]; (* "`Elfen`" *)
+
+
+(* ::Subsection::Closed:: *)
 (*Import all file types*)
 
 
@@ -439,6 +572,7 @@ ImportMesh[file_,opts:OptionsPattern[]]:=Module[
 	Switch[
 		FileExtension[file],
 		"inp",importAbaqusMesh[file,scale],
+		"mes",importElfenMesh[file,scale],
 		"mphtxt",importComsolMesh[file,scale],
 		"msh",importGmshMesh[file,scale],
 		_,Message[ImportMesh::nosup];$Failed
