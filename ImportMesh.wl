@@ -458,19 +458,20 @@ getNodes[list_]:=Module[
 ]
 
 
-$ElfenTypes={
-21->TriangleElement,
-22->QuadElement,
-23->TriangleElement,
-31->TetrahedronElement,
-33->HexahedronElement,
-34->TetrahedronElement,
-36->HexahedronElement
+$elfenTypes={
+	21->{TriangleElement,{1,2,3}},
+	22->{QuadElement,{1,2,3,4}},
+	23->{TriangleElement,{1,3,5,2,4,6}},
+	24|25->{QuadElement,{1,3,5,7,2,4,6,8}},
+	31->{TetrahedronElement,{1,2,3,4}},
+	33->{HexahedronElement,{1,2,3,4,5,6,7,8}},
+	34->{TetrahedronElement,{1,3,5,10,2,4,6,8,9,7}},
+	36->{HexahedronElement,{1,3,5,7,13,15,17,19,2,4,6,8,14,16,18,20,9,10,11,12}}
 };
 
 
 processElements[list_,startLine_Integer,type_Integer]:=Module[
-	{nNodes,nElms,connectivity,head},
+	{nNodes,nElms,connectivity,head,reordering},
 	
 	nNodes=ToExpression@list[[startLine+1]];
 	nElms=ToExpression@list[[startLine+2]];
@@ -479,9 +480,9 @@ processElements[list_,startLine_Integer,type_Integer]:=Module[
 		ToExpression/@list[[startLine+3;;startLine+3+(nNodes*nElms)-1]],
 		nNodes
 	];
-	head=type/.$ElfenTypes;
+	{head,reordering}=type/.$elfenTypes;
 	
-	head[connectivity]
+	head[connectivity[[All,reordering]] ]
 ]
 
 
