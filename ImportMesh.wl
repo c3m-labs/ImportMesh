@@ -39,7 +39,8 @@ Begin["`Private`"];
 (* 
 Implementation for each mesh file format has its own private subcontext (e.g. ImportMesh`Private`Gmsh`).
 This is because low level helper functions are doing same things differentyl for different formats.
-Some common private functions are implemented in ImportMesh`Private` context.
+Some common private functions are implemented in ImportMesh`Private` context and inside other subcontext they 
+to be called by their full name.
 *)
 
 
@@ -48,8 +49,39 @@ Some common private functions are implemented in ImportMesh`Private` context.
 
 
 convertToElementMesh[nodes_,allElements_]:=Module[
-	{},
-	Null
+	{sDim,point,line,surface,solid,head,meshElementsOpt},
+	
+	(* Spatial dimensions of the problem. *)
+	sDim=Last@Dimensions[nodes];
+	
+	point=Cases[allElements,PointElement[__],2];
+	line=Cases[allElements,LineElement[__],2];
+	surface=Cases[allElements,TriangleElement[__]|QuadElement[__],2];
+	solid=Cases[allElements,TetrahedronElement[__]|HexahedronElement[__],2];
+	
+	(* If number of dimensions is 3 but no solid elements are specified, 
+	then we use ToBoundaryMesh to create ElementMesh. And similarly for 2 dimensions. *)
+	If[
+		TrueQ[(sDim==3&&solid=={})||(sDim==2&&surface=={})]
+		,
+		head=ToBoundaryMesh;
+		meshElementsOpt={}
+		,
+		head=ToElementMesh;
+		meshElementsOpt={"MeshElements"->Switch[sDim,1,line,2,surface,3,solid]}
+	];
+	(* "Coordinates" and "MeshElements" are the only required fields. 
+	Order of rules given seems important. Also use of Sequence is a little hack, because Nothing didn't work.
+	Possible bug?  *)	
+	head[
+		"Coordinates"->nodes,
+		Sequence@@meshElementsOpt,
+		"BoundaryElements"->Switch[sDim,1,point,2,line,3,surface],
+		"PointElements"->point,
+		"CheckIncidentsCompletness"->False,
+		"CheckIntersections"->False,
+		"DeleteDuplicateCoordinates"->False
+	]//Quiet
 ]
 
 
@@ -128,48 +160,14 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-ImportMesh`Private`importAbaqusMesh::msg="`1`";
-
 ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
-	{list,nodes,sdim,markers,allElements,point,line,surface,solid},
+	{list,nodes,allElements},
 	
 	list=ReadList[file,String];
 	nodes=getNodes[list];
-	(* Spatial dimensions of the problem. *)
-	sdim=Last@Dimensions[nodes];
 	allElements=getElements[list];
-
-
-	point=Cases[allElements,PointElement[__],2];
-	line=Cases[allElements,LineElement[__],2];
-	surface=Cases[allElements,TriangleElement[__]|QuadElement[__],2];
-	solid=Cases[allElements,TetrahedronElement[__]|HexahedronElement[__],2];
 	
-	(* If number of dimensions is 3 but no solid elements are specified, 
-	then we use ToBoundaryMesh to create ElementMesh. And similarly for 2 dimensions. *)
-	If[
-		TrueQ[(sdim==3&&solid=={})||(sdim==2&&surface=={})],
-		ToBoundaryMesh[
-			"Coordinates"->nodes,
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-		]//Quiet
-		,
-		ToElementMesh[
-			(* "Coordinates" and "MeshElements" are the only required fields. 
-			Order of rules given seems important. Possible bug?  *)
-			"Coordinates"->nodes,
-			"MeshElements"->Switch[sdim,1,line,2,surface,3,solid],
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-	]//Quiet
-	]
+	ImportMesh`Private`convertToElementMesh[nodes,allElements]
 ]
 
 
