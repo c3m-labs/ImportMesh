@@ -17,7 +17,7 @@
 (*Begin package*)
 
 
-(* Mathematica FE+M functionality is needed. *)
+(* Mathematica FEM functionality is needed. *)
 BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
@@ -38,7 +38,7 @@ Begin["`Private`"];
 
 (* 
 Implementation for each mesh file format has its own private subcontext (e.g. ImportMesh`Private`Gmsh`).
-This is because low level helper functions are doing same things differentyl for different formats.
+This is because low level helper functions (e.g. getNodes) are doing same things differentl< for different formats.
 Some common private functions are implemented in ImportMesh`Private` context and inside other subcontext they 
 to be called by their full name.
 *)
@@ -244,10 +244,9 @@ getElements[list_,type_,length_,startElement_,startDomain_]:=With[
 
 
 ImportMesh`Private`importComsolMesh[file_,scale_:1]:=Module[
-	{list,sdim,nodes,types,lengths,startElements,startMarkers,allElements,point,line,surface,solid},
+	{list,sdim,nodes,types,lengths,startElements,startMarkers,allElements},
 	
 	list=ReadList[file,String];
-	sdim=First@getNumber[list," # sdim"];
 	types=Flatten@StringCases[list,Whitespace~~x__~~" # type name":>x];
 	lengths=getNumber[list," # number of elements"];
 	startElements=getPosition[list,"# Elements"];
@@ -260,35 +259,7 @@ ImportMesh`Private`importComsolMesh[file_,scale_:1]:=Module[
 		{types,lengths,startElements,startMarkers}
 	];
 	
-	point=Cases[allElements,PointElement[__],2];
-	line=Cases[allElements,LineElement[__],2];
-	surface=Cases[allElements,TriangleElement[__]|QuadElement[__],2];
-	solid=Cases[allElements,TetrahedronElement[__]|HexahedronElement[__],2];
-		
-	(* If number of dimensions is 3 but no solid elements are specified, 
-	then we use ToBoundaryMesh to create ElementMesh. And similarly for 2 dimensions. *)
-	If[
-		TrueQ[(sdim==3&&solid=={})||(sdim==2&&surface=={})],
-		ToBoundaryMesh[
-			"Coordinates"->scale*nodes,
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-		]//Quiet,
-		ToElementMesh[
-			(* "Coordinates" and "MeshElements" are the only required fields. 
-			Order of rules given seems important. Possible bug?  *)
-			"Coordinates"->scale*nodes,
-			"MeshElements"->Switch[sdim,1,line,2,surface,3,solid],
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-	]//Quiet
-	]
+	ImportMesh`Private`convertToElementMesh[nodes,allElements]
 ]
 
 
@@ -381,47 +352,14 @@ getElements[list_]:=Module[
 
 
 ImportMesh`Private`importGmshMesh[file_,scale_:1]:=Module[
-	{list,nodes,sdim,markers,allElements,point,line,surface,solid},
+	{list,nodes,markers,allElements},
 	
 	list=ReadList[file,String];
 	nodes=getNodes[list];
-	(* Spatial dimensions of the problem. *)
-	sdim=Last@Dimensions[nodes];
-	
 	markers=getMarkers[list];
 	allElements=getElements[list];
 	
-	
-	point=Cases[allElements,PointElement[__],2];
-	line=Cases[allElements,LineElement[__],2];
-	surface=Cases[allElements,TriangleElement[__]|QuadElement[__],2];
-	solid=Cases[allElements,TetrahedronElement[__]|HexahedronElement[__],2];
-	
-	(* If number of dimensions is 3 but no solid elements are specified, 
-	then we use ToBoundaryMesh to create ElementMesh. And similarly for 2 dimensions. *)
-	If[
-		TrueQ[(sdim==3&&solid=={})||(sdim==2&&surface=={})],
-		ToBoundaryMesh[
-			"Coordinates"->nodes,
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-		]//Quiet
-		,
-		ToElementMesh[
-			(* "Coordinates" and "MeshElements" are the only required fields. 
-			Order of rules given seems important. Possible bug?  *)
-			"Coordinates"->nodes,
-			"MeshElements"->Switch[sdim,1,line,2,surface,3,solid],
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-	]//Quiet
-	]
+	ImportMesh`Private`convertToElementMesh[nodes,allElements]
 ]
 
 
@@ -512,7 +450,7 @@ getElements[list_]:=Module[
 
 
 ImportMesh`Private`importElfenMesh[file_,scale_:1]:=Module[
-	{list,nodes,sdim,markers,allElements,point,line,surface,solid},
+	{list,nodes,markers,allElements},
 	
 	list=ReadList[file,
 		Word,
@@ -520,39 +458,9 @@ ImportMesh`Private`importElfenMesh[file_,scale_:1]:=Module[
 		RecordSeparators -> {"#","\"","{","}","*","\n"}
 	]//Flatten;
 	nodes=getNodes[list];
-	sdim=Last@Dimensions[nodes];
 	allElements=getElements[list];
-		
-	point=Cases[allElements,PointElement[__],2];
-	line=Cases[allElements,LineElement[__],2];
-	surface=Cases[allElements,TriangleElement[__]|QuadElement[__],2];
-	solid=Cases[allElements,TetrahedronElement[__]|HexahedronElement[__],2];
 	
-	(* If number of dimensions is 3 but no solid elements are specified, 
-	then we use ToBoundaryMesh to create ElementMesh. And similarly for 2 dimensions. *)
-	If[
-		TrueQ[(sdim==3&&solid=={})||(sdim==2&&surface=={})],
-		ToBoundaryMesh[
-			"Coordinates"->nodes,
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-		]//Quiet
-		,
-		ToElementMesh[
-			(* "Coordinates" and "MeshElements" are the only required fields. 
-			Order of rules given seems important. Possible bug?  *)
-			"Coordinates"->nodes,
-			"MeshElements"->Switch[sdim,1,line,2,surface,3,solid],
-			"BoundaryElements"->Switch[sdim,1,point,2,line,3,surface],
-			"PointElements"->point,
-			"CheckIncidentsCompletness"->False,
-			"CheckIntersections"->False,
-			"DeleteDuplicateCoordinates"->False
-	]//Quiet
-	]
+	ImportMesh`Private`convertToElementMesh[nodes,allElements]
 ]
 
 
