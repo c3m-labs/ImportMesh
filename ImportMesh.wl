@@ -9,7 +9,7 @@
 (* :Author: Matevz Pintar, C3M, Slovenia *)
 (* :Summary: Utilities for importing FEM meshes from other software. *)
 (* :Copyright: C3M d.o.o., 2018 *)
-(* :Package Version: 0.1.0 *)
+(* :Package Version: 0.2.0 *)
 (* :Mathematica Version: 11.2 *)
 
 
@@ -17,7 +17,7 @@
 (*Begin package*)
 
 
-(* Mathematica FEM functionality is needed. *)
+(* Mathematica FE+M functionality is needed. *)
 BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
@@ -28,17 +28,29 @@ BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.";
 
 
-(* Implementation for each software has its own private subcontext, but their main function
- should be defined in public context, so they can be found by the other public functions. *)
- (* TODO: Find out a better way to use separate subcontexts for each implementation. *)
-importAbaqusMesh;
-importComsolMesh;
-importGmshMesh;
-importElfenMesh;
-
-
 (* ::Section::Closed:: *)
 (*Code*)
+
+
+(* Begin private context *)
+Begin["`Private`"];
+
+
+(* 
+Implementation for each mesh file format has its own private subcontext (e.g. ImportMesh`Private`Gmsh`).
+This is because low level helper functions are doing same things differentyl for different formats.
+Some common private functions are implemented in ImportMesh`Private` context.
+*)
+
+
+(* ::Subsection::Closed:: *)
+(*Common functions*)
+
+
+convertToElementMesh[nodes_,allElements_]:=Module[
+	{},
+	Null
+]
 
 
 (* ::Subsection::Closed:: *)
@@ -116,9 +128,9 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-importAbaqusMesh::msg="`1`";
+ImportMesh`Private`importAbaqusMesh::msg="`1`";
 
-importAbaqusMesh[file_,scale_:1]:=Module[
+ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
 	{list,nodes,sdim,markers,allElements,point,line,surface,solid},
 	
 	list=ReadList[file,String];
@@ -233,7 +245,7 @@ getElements[list_,type_,length_,startElement_,startDomain_]:=With[
 (*Main function*)
 
 
-importComsolMesh[file_,scale_:1]:=Module[
+ImportMesh`Private`importComsolMesh[file_,scale_:1]:=Module[
 	{list,sdim,nodes,types,lengths,startElements,startMarkers,allElements,point,line,surface,solid},
 	
 	list=ReadList[file,String];
@@ -370,9 +382,7 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-importGmshMesh::msg="`1`";
-
-importGmshMesh[file_,scale_:1]:=Module[
+ImportMesh`Private`importGmshMesh[file_,scale_:1]:=Module[
 	{list,nodes,sdim,markers,allElements,point,line,surface,solid},
 	
 	list=ReadList[file,String];
@@ -503,9 +513,7 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-importElfenMesh::msg="`1`";
-
-importElfenMesh[file_,scale_:1]:=Module[
+ImportMesh`Private`importElfenMesh[file_,scale_:1]:=Module[
 	{list,nodes,sdim,markers,allElements,point,line,surface,solid},
 	
 	list=ReadList[file,
@@ -557,9 +565,6 @@ End[]; (* "`Elfen`" *)
 (*Import all file types*)
 
 
-Begin["`Private`"];
-
-
 ImportMesh::nosup="Mesh file extension is currently not supported.";
 
 Options[ImportMesh]={"ScaleSize"->1};
@@ -581,11 +586,11 @@ ImportMesh[file_,opts:OptionsPattern[]]:=Module[
 ]
 
 
-End[];(* "`Private`" *)
-
-
 (* ::Section::Closed:: *)
 (*End package*)
+
+
+End[]; (* "`Private`" *)
 
 
 EndPackage[];
