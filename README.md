@@ -21,3 +21,13 @@ The only (currently) avaliable function is  `ImportMesh`. It creates `ElementMes
 ![screenshot](https://i.imgur.com/OpzA8J5.png "Quad mesh")
 	
 More information on how to manipulate and visualize `ElementMesh` objects is available in official [documentation](https://reference.wolfram.com/language/FEMDocumentation/tutorial/ElementMeshVisualization.html)
+
+## Contributions
+
+Contributions to ImportMesh package are very welcome. You can open a [new issue](https://github.com/c3m-labs/ImportMesh/issues/new) with bug report or feature request.
+
+These are some things you can help with:
+
+ - Test package with different mesh files
+ - Provide sample mesh files from other, not yet supported, software
+ - Propose code improvements (style or performance)
