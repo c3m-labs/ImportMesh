@@ -26,6 +26,8 @@ BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
 ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.";
+ImportMesh::eltype="Element type `1` is not supported.";
+ImportMesh::abaqus="Incremental node or element generation (*NGEN and *ELGEN keywords) is not supported.";
 
 
 (* ::Section::Closed:: *)
@@ -97,62 +99,77 @@ Begin["`Abaqus`"];
 (*Helper functions*)
 
 
-getPosition[list_List,key_]:=ToExpression@Flatten@Position[list,s_String/;StringStartsQ[s,key]]
+getPosition[list_List,key_]:=Position[list,key][[All,1]]
 
 
-getElementInfo[list_,line_Integer]:=First[
-	StringCases[Part[list,line],"*ELEMENT,TYPE="~~type__~~",ELSET="~~m__:>{type,m}],
-	{}
-]
+(* Collect lines until another symbol "*" appears. *)
+takeLines[list_,start_Integer]:=TakeWhile[Drop[list,start],(StringPart[First@#,1]=!="*")&]
 
 
 getNodes[list_]:=Module[
-	{start,listOfStrings},
-	(* We assume all nodes are listed only on one place in the file. *)
-	start=First@getPosition[list,"*NODE"];
-	(* Collect lines until another symbol "*" appears. *)
-	listOfStrings=StringSplit[
-		StringDelete[" "]@TakeWhile[Drop[list,start],(StringPart[#,1]=!="*")&],
-		","
-	];
-	Map[
+	{startLines,allNodeData,numbering,crds},
+	startLines=getPosition[list,"*NODE"];
+	allNodeData=Join@@(takeLines[list,#]&/@startLines);
+	numbering=ToExpression[allNodeData[[All,1]]];
+	crds=Map[
 		Internal`StringToDouble,
-		listOfStrings[[All,2;;]],
+		allNodeData[[All,2;;UpTo[4]]],
 		{2}
+	];
+	{numbering,crds}
+]
+
+
+getElementType[list_,pos_Integer]:=StringDelete[list[[pos,2]],"TYPE="]
+
+
+getElementSet[list_,pos_Integer]:=If[
+	Length[list[[pos]]]>2,
+	StringDelete[list[[pos,3]],"ELSET="],
+	Missing[]
+]
+
+
+getElementConnectivity[list_,pos_]:=ToExpression[Join@@takeLines[list,pos]]
+
+
+$abaqusTypes={
+	Alternatives["S3","CPS3","S3R","CAX3","CAX3T","CPE3"]->{TriangleElement,{1,2,3}},
+	Alternatives["STRI65","CAX6","CPE6","CPS6"]->{TriangleElement,{1,2,3,4,5,6}},
+	Alternatives["S4","CPS4","S4R","CAX4","CPE4"]->{QuadElement,{1,2,3,4}},
+	Alternatives["S8","S8R","S8R5","CAX8","CPE8"]->{QuadElement,{1,2,3,4,5,6,7,8}},
+	Alternatives["C3D4","C3D4H"]->{TetrahedronElement,{1,2,3,4}},
+	Alternatives["C3D10"]->{TetrahedronElement,{1,2,3,4,5,6,7,8,9,10}},
+	Alternatives["C3H8","C3D8H","C3D8R","C3D8T"]->{HexahedronElement,{1,2,3,4,5,6,7,8}},
+	Alternatives["C3D20"]->{HexahedronElement,Range[20]}
+};
+
+
+processElements[type_String,flattenedConnectivity_,marker_Integer]:=Block[
+	{head,nodes,connectivity},
+	{head,nodes}=type/.$abaqusTypes;
+	connectivity=Partition[flattenedConnectivity,Length[nodes]+1][[All,2;;]];
+	head[
+		connectivity/.$nodeNumbering,
+		ConstantArray[marker,Length[connectivity]]
 	]
 ]
 
 
-$abaqusTypes={
-	Alternatives["S3","S3R"]->TriangleElement,
-	Alternatives["S4","S4R"]->QuadElement,
-	Alternatives["C3D4","C3D4H"]->TetrahedronElement,
-	Alternatives["C3H8","C3D8H","C3D8R"]->HexahedronElement
-};
-
-
-processElements[list_,startLine_Integer]:=Module[
-	{listOfStrings,type,connectivity},
-	listOfStrings=StringSplit[
-		StringDelete[" "]@TakeWhile[Drop[list,startLine],(StringPart[#,1]=!="*")&],
-		","
-	];
-	(* For now we ignore element markers (2nd position) *)
-	type=First@getElementInfo[list,startLine]/.$abaqusTypes;
-	connectivity=Map[
-		ToExpression,
-		listOfStrings[[All,2;;]],
-		{2}
-	];
-	
-	type[connectivity]
-]
-
-
 getElements[list_]:=Module[
-	{startPositions},
-	startPositions=getPosition[list,"*ELEMENT"];
-	processElements[list,#]&/@startPositions
+	{startLines,sets,types,supportedTypes,flattenedConnectivity},
+	startLines=getPosition[list,"*ELEMENT"];
+	sets=getElementSet[list,#]&/@startLines;
+	types=getElementType[list,#]&/@startLines;
+	supportedTypes=Flatten[Keys@$abaqusTypes/.Alternatives->List];
+	If[Not@MemberQ[supportedTypes,#],Message[ImportMesh::eltype,#];Throw[$Failed]]&/@types;
+	
+	flattenedConnectivity=getElementConnectivity[list,#]&/@startLines;
+	$markerNumbering=MapIndexed[#1->First[#2]&,Union@DeleteMissing[sets]];
+	MapThread[
+		processElements[#1,#2,#3]&,
+		{types,flattenedConnectivity,sets/.Prepend[$markerNumbering,Missing[]->0]}
+	]
 ]
 
 
@@ -161,10 +178,23 @@ getElements[list_]:=Module[
 
 
 ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
-	{list,nodes,allElements},
+	{list,nodes,numbering,allElements},
 	
-	list=ReadList[file,String];
-	nodes=getNodes[list];
+	list=DeleteCases[
+		StringDelete[Whitespace]/@ToUpperCase@ReadList[
+			file,
+			Word,
+			RecordLists->True,
+			WordSeparators->{","},
+			RecordSeparators -> {"\n"}
+		],
+		{s_String/;StringStartsQ[s,"**"]}
+	];
+	(* Currently incremental node and element generation is not supported.*)
+	If[getPosition[list,"*NGEN"|"*ELGEN"]=!={},Message[ImportMesh::abaqus];Throw[$Failed]];
+	
+	{numbering,nodes}=getNodes[list];
+	$nodeNumbering=MapIndexed[#1->First[#2]&,numbering];
 	allElements=getElements[list];
 	
 	ImportMesh`Private`convertToElementMesh[nodes,allElements]
@@ -481,6 +511,7 @@ ImportMesh[file_,opts:OptionsPattern[]]:=Module[
 	scale=N@OptionValue["ScaleSize"];
 	
 	(*PrintTemporary["Converting mesh..."];*)
+	Catch[
 	Switch[
 		FileExtension[file],
 		"inp",importAbaqusMesh[file,scale],
@@ -488,6 +519,7 @@ ImportMesh[file_,opts:OptionsPattern[]]:=Module[
 		"mphtxt",importComsolMesh[file,scale],
 		"msh",importGmshMesh[file,scale],
 		_,Message[ImportMesh::nosup];$Failed
+	]
 	]
 ]
 
