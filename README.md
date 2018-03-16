@@ -1,7 +1,7 @@
 # ImportMesh
 Utilities for importing FEM meshes to Mathematica. Currently supported file formats:
 
- - .inp ([Hypermesh](https://www.altairhyperworks.com/product/HyperMesh) / Abaqus)
+ - .inp ([Abaqus](https://www.3ds.com/products-services/simulia/products/abaqus/))
  - .mes ([Elfen](http://www.rockfieldglobal.com/))
  - .msh ([Gmsh](http://gmsh.info/))
  - .mphtxt ([Comsol](https://www.comsol.com/))
