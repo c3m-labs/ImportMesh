@@ -26,6 +26,9 @@ BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
 ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.";
+
+(* All error/warning messages are currently attached to the only public symbol. *)
+ImportMesh::nosup="Mesh file format \".`1`\" is currently not supported.";
 ImportMesh::eltype="Element type `1` is not supported.";
 ImportMesh::abaqus="Incremental node or element generation (*NGEN and *ELGEN keywords) is not supported.";
 
@@ -40,7 +43,7 @@ Begin["`Private`"];
 
 (* 
 Implementation for each mesh file format has its own private subcontext (e.g. ImportMesh`Private`Gmsh`).
-This is because low level helper functions (e.g. getNodes) are doing same things differentl< for different formats.
+This is because low level helper functions (e.g. getNodes) are doing same things differently for different formats.
 Some common private functions are implemented in ImportMesh`Private` context and inside other subcontext they 
 to be called by their full name.
 *)
@@ -50,6 +53,8 @@ to be called by their full name.
 (*Common functions*)
 
 
+(* This function is common for all file formats. It accepts nodes and  the list with all elements 
+specified in a file and creates ElementMesh. *)
 convertToElementMesh[nodes_,allElements_]:=Module[
 	{sDim,point,line,surface,solid,head,meshElementsOpt},
 	
@@ -94,11 +99,19 @@ convertToElementMesh[nodes_,allElements_]:=Module[
 (* Begin private context *)
 Begin["`Abaqus`"];
 
+(*
+Abaqus has quite involved specification of .inp input file. A lot of code is used to extract element topology
+(e.g. TetrahedronElement) its order from element type string (e.g. "TYPE=C3D20R"). 
+Another problem is that element connectivity specification for elements with a lot of nodes sometimes breaks to a 
+new line in a text file and this has to be somehow taken into account.
+  *)
+
 
 (* ::Subsubsection::Closed:: *)
 (*Process elements*)
 
 
+(* This "type" argumet it the next few functions is used only to issue a message with ful element type string. *)
 processLine[type_,string_]:=Which[
 	StringStartsQ[string,"1"],{LineElement,2},
 	StringStartsQ[string,"2"],{LineElement,3},
@@ -140,7 +153,7 @@ processContinuumType[type_,inString_]:=Module[
 
 processElementType[type_String]:=Module[
 	{string=type,keysCont,keysStruct},
-	(* Order of keys is important because 2 start with the same letter. *)
+	(* Order of keys is important because two of them start with the same letter. *)
 	keysCont=Alternatives@@{"C","DC","Q"};
 	keysStruct=Alternatives@@{"M3D","DS","STRI","S"};
 	
@@ -148,6 +161,7 @@ processElementType[type_String]:=Module[
 	$spatialDimension=3;
 	
 	Which[
+		(* Continuum elemements can be 2D or 3D and we have to process this separately. *)
 		StringStartsQ[string,keysCont],
 		string=StringTrim[string,keysCont];processContinuumType[type,string]
 		,
@@ -166,6 +180,7 @@ processElements[type_String,flattenedConnectivity_,marker_Integer]:=Block[
 	{head,noNodes,connectivity},
 	{head,noNodes}=processElementType[type];
 	connectivity=Partition[flattenedConnectivity,noNodes+1][[All,2;;]];
+	(* $nodeNumbering is a global symbol here. This is a quick hack and could be solved better. *)
 	head[
 		connectivity/.$nodeNumbering,
 		ConstantArray[marker,Length[connectivity]]
@@ -177,6 +192,8 @@ processElements[type_String,flattenedConnectivity_,marker_Integer]:=Block[
 (*Helper functions*)
 
 
+(* Helper function to get position of keyword in a list of lists. It assumes Abaqus keywords (e.g. *NODE)
+are always at the begining of line. *)
 getPosition[list_List,key_]:=Position[list,key][[All,1]]
 
 
@@ -184,6 +201,7 @@ getPosition[list_List,key_]:=Position[list,key][[All,1]]
 takeLines[list_,start_Integer]:=TakeWhile[Drop[list,start],(StringPart[First@#,1]=!="*")&]
 
 
+(* Collect all node specifications (can be scattered around file) and return their numbering and coordinates (X,Y,Z). *)
 getNodes[list_]:=Module[
 	{startLines,allNodeData,numbering,crds},
 	startLines=getPosition[list,"*NODE"];
@@ -212,19 +230,20 @@ getElementConnectivity[list_,pos_]:=ToExpression[Join@@takeLines[list,pos]]
 
 
 getElements[list_]:=Module[
-	{startLines,sets,types,supportedTypes,flattenedConnectivity},
+	{startLines,elSetStrings,types,supportedTypes,flattenedConnectivity,markers},
 	startLines=getPosition[list,"*ELEMENT"];
-	sets=getElementSet[list,#]&/@startLines;
-	types=getElementType[list,#]&/@startLines;
-	(*supportedTypes=Flatten[Keys@$abaqusTypes/.Alternatives\[Rule]List];
-	If[Not@MemberQ[supportedTypes,#],Message[ImportMesh::eltype,#];Throw[$Failed]]&/@types;*)
 	
+	elSetStrings=getElementSet[list,#]&/@startLines;
+	types=getElementType[list,#]&/@startLines;	
 	flattenedConnectivity=getElementConnectivity[list,#]&/@startLines;
-	$markerNumbering=MapIndexed[#1->First[#2]&,Union@DeleteMissing[sets]];
-	MapThread[
-		processElements[#1,#2,#3]&,
-		{types,flattenedConnectivity,sets/.Prepend[$markerNumbering,Missing[]->0]}
-	]
+	
+	(* Values of variable ELSET is are sorted and assigned consecutive integer. If ELSET is not set, then
+	elements get metker value 0. This is save in global symbol $markerNumbering for further use. 
+	This is a hack, and could be solved more elegantly. *)
+	$markerNumbering=MapIndexed[#1->First[#2]&,Union@DeleteMissing[elSetStrings]];
+	markers=elSetStrings/.Prepend[$markerNumbering,Missing[]->0];
+	
+	MapThread[ processElements[#1,#2,#3]&, {types,flattenedConnectivity,markers} ]
 ]
 
 
@@ -235,6 +254,8 @@ getElements[list_]:=Module[
 ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
 	{list,nodes,numbering,allElements,dim},
 	
+	(* Abaqus is insensitive to whitespace so this is deleted. Lines starting with "**" are comments, so they
+	are deleted as well. *)
 	list=DeleteCases[
 		StringDelete[Whitespace]/@ToUpperCase@ReadList[
 			file,
@@ -251,6 +272,9 @@ ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
 	{numbering,nodes}=getNodes[list];
 	$nodeNumbering=MapIndexed[#1->First[#2]&,numbering];
 	allElements=getElements[list];
+	
+	(* Here we use the ugly hack. Value of global symbol $spatialDimension set at proccessing the element type 
+	is used to determine if we have 2D or 3D space mesh. *)
 	dim=$spatialDimension;
 	
 	ImportMesh`Private`convertToElementMesh[nodes[[All,1;;dim]],allElements]
@@ -554,17 +578,18 @@ End[]; (* "`Elfen`" *)
 
 
 (* ::Subsection::Closed:: *)
-(*Import all file types*)
+(*The main public function*)
 
-
-ImportMesh::nosup="Mesh file extension is currently not supported.";
 
 Options[ImportMesh]={"ScaleSize"->1};
 
 ImportMesh[file_,opts:OptionsPattern[]]:=Module[
 	{scale},
 	If[Not@TrueQ@FileExistsQ[file],Message[ImportMesh::noopen,file];Return[$Failed]];
+	
+	(* Obviously, mesh scaling factor has to be positive number.*)
 	scale=N@OptionValue["ScaleSize"];
+	If[Not@TrueQ@Positive[scale],scale=1.];
 	
 	(*PrintTemporary["Converting mesh..."];*)
 	Catch[
@@ -574,7 +599,7 @@ ImportMesh[file_,opts:OptionsPattern[]]:=Module[
 		"mes",importElfenMesh[file,scale],
 		"mphtxt",importComsolMesh[file,scale],
 		"msh",importGmshMesh[file,scale],
-		_,Message[ImportMesh::nosup];$Failed
+		_,Message[ImportMesh::nosup,FileExtension[file]];$Failed
 	]
 	]
 ]
