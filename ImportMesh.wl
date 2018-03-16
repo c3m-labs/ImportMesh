@@ -96,6 +96,84 @@ Begin["`Abaqus`"];
 
 
 (* ::Subsubsection::Closed:: *)
+(*Process elements*)
+
+
+processLine[type_,string_]:=Which[
+	StringStartsQ[string,"1"],{LineElement,2},
+	StringStartsQ[string,"2"],{LineElement,3},
+	True,Message[ImportMesh::eltype,type];Throw[$Failed]
+]
+
+
+processSurface[type_,string_]:=Which[
+	StringStartsQ[string,"3"],{TriangleElement,3},
+	StringStartsQ[string,"6"],{TriangleElement,6},
+	StringStartsQ[string,"4"],{QuadElement,4},
+	StringStartsQ[string,"8"],{QuadElement,8},
+	True,Message[ImportMesh::eltype,type];Throw[$Failed]
+]
+
+
+processVolume[type_,string_]:=Which[
+	StringStartsQ[string,"4"],{TetrahedronElement,4},
+	StringStartsQ[string,"10"],{TetrahedronElement,10},
+	StringStartsQ[string,"8"],{HexahedronElement,8},
+	StringStartsQ[string,"20"],{HexahedronElement,20},
+	True,Message[ImportMesh::eltype,type];Throw[$Failed]
+]
+
+
+processContinuumType[type_,inString_]:=Module[
+	{string=inString},
+	Which[
+		StringStartsQ[string,"PS"|"PE"|"AX"],
+		string=StringTrim[string,"PS"|"PE"|"AX"];$spatialDimension=2;processSurface[type,string]
+		,
+		StringStartsQ[string,"3D"],
+		string=StringTrim[string,"3D"];processVolume[type,string]
+		,
+		True,Message[ImportMesh::eltype,type];Throw[$Failed]
+	]
+]
+
+
+processElementType[type_String]:=Module[
+	{string=type,keysCont,keysStruct},
+	(* Order of keys is important because 2 start with the same letter. *)
+	keysCont=Alternatives@@{"C","DC","Q"};
+	keysStruct=Alternatives@@{"M3D","DS","STRI","S"};
+	
+	(* This is a quick ugly hack to pass around spatial dimension.*)
+	$spatialDimension=3;
+	
+	Which[
+		StringStartsQ[string,keysCont],
+		string=StringTrim[string,keysCont];processContinuumType[type,string]
+		,
+		StringStartsQ[string,keysStruct],
+		string=StringTrim[string,keysStruct];processSurface[type,string]
+		,
+		StringStartsQ[string,"B2"],
+		string=StringTrim[string,"B2"];$spatialDimension=2;processLine[type,string]
+		,
+		True,Message[ImportMesh::eltype,type];Throw[$Failed]
+	]
+]
+
+
+processElements[type_String,flattenedConnectivity_,marker_Integer]:=Block[
+	{head,noNodes,connectivity},
+	{head,noNodes}=processElementType[type];
+	connectivity=Partition[flattenedConnectivity,noNodes+1][[All,2;;]];
+	head[
+		connectivity/.$nodeNumbering,
+		ConstantArray[marker,Length[connectivity]]
+	]
+]
+
+
+(* ::Subsubsection::Closed:: *)
 (*Helper functions*)
 
 
@@ -133,36 +211,13 @@ getElementSet[list_,pos_Integer]:=If[
 getElementConnectivity[list_,pos_]:=ToExpression[Join@@takeLines[list,pos]]
 
 
-$abaqusTypes={
-	Alternatives["S3","CPS3","S3R","CAX3","CAX3T","CPE3"]->{TriangleElement,{1,2,3}},
-	Alternatives["STRI65","CAX6","CPE6","CPS6"]->{TriangleElement,{1,2,3,4,5,6}},
-	Alternatives["S4","CPS4","S4R","CAX4","CPE4"]->{QuadElement,{1,2,3,4}},
-	Alternatives["S8","S8R","S8R5","CAX8","CPE8"]->{QuadElement,{1,2,3,4,5,6,7,8}},
-	Alternatives["C3D4","C3D4H"]->{TetrahedronElement,{1,2,3,4}},
-	Alternatives["C3D10"]->{TetrahedronElement,{1,2,3,4,5,6,7,8,9,10}},
-	Alternatives["C3H8","C3D8H","C3D8R","C3D8T"]->{HexahedronElement,{1,2,3,4,5,6,7,8}},
-	Alternatives["C3D20"]->{HexahedronElement,Range[20]}
-};
-
-
-processElements[type_String,flattenedConnectivity_,marker_Integer]:=Block[
-	{head,nodes,connectivity},
-	{head,nodes}=type/.$abaqusTypes;
-	connectivity=Partition[flattenedConnectivity,Length[nodes]+1][[All,2;;]];
-	head[
-		connectivity/.$nodeNumbering,
-		ConstantArray[marker,Length[connectivity]]
-	]
-]
-
-
 getElements[list_]:=Module[
 	{startLines,sets,types,supportedTypes,flattenedConnectivity},
 	startLines=getPosition[list,"*ELEMENT"];
 	sets=getElementSet[list,#]&/@startLines;
 	types=getElementType[list,#]&/@startLines;
-	supportedTypes=Flatten[Keys@$abaqusTypes/.Alternatives->List];
-	If[Not@MemberQ[supportedTypes,#],Message[ImportMesh::eltype,#];Throw[$Failed]]&/@types;
+	(*supportedTypes=Flatten[Keys@$abaqusTypes/.Alternatives\[Rule]List];
+	If[Not@MemberQ[supportedTypes,#],Message[ImportMesh::eltype,#];Throw[$Failed]]&/@types;*)
 	
 	flattenedConnectivity=getElementConnectivity[list,#]&/@startLines;
 	$markerNumbering=MapIndexed[#1->First[#2]&,Union@DeleteMissing[sets]];
@@ -178,7 +233,7 @@ getElements[list_]:=Module[
 
 
 ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
-	{list,nodes,numbering,allElements},
+	{list,nodes,numbering,allElements,dim},
 	
 	list=DeleteCases[
 		StringDelete[Whitespace]/@ToUpperCase@ReadList[
@@ -196,8 +251,9 @@ ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
 	{numbering,nodes}=getNodes[list];
 	$nodeNumbering=MapIndexed[#1->First[#2]&,numbering];
 	allElements=getElements[list];
+	dim=$spatialDimension;
 	
-	ImportMesh`Private`convertToElementMesh[nodes,allElements]
+	ImportMesh`Private`convertToElementMesh[nodes[[All,1;;dim]],allElements]
 ]
 
 
