@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Header comments*)
 
 
@@ -13,19 +13,26 @@
 (* :Mathematica Version: 11.2 *)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Begin package*)
+
+
+(* ::Input:: *)
+(*MakeIndentable[]*)
 
 
 (* Mathematica FEM functionality is needed. *)
 BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Messages*)
 
 
 ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.";
+ImportMesh::usage="ImportMesh[\"string\", fmt] imports \"string\" in the specified format";
+ImportMesh::usage="ImportMesh[stream, fmt] imports the InputStream stream in the specified format";
+
 
 (* All error/warning messages are currently attached to the only public symbol. *)
 ImportMesh::nosup="Mesh file format \".`1`\" is currently not supported.";
@@ -33,7 +40,22 @@ ImportMesh::eltype="Element type `1` is not supported.";
 ImportMesh::abaqus="Incremental node or element generation (*NGEN and *ELGEN keywords) is not supported.";
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
+(*Package Level Functions*)
+
+
+BeginPackage["`Package`"];
+importAbaqusMesh::usage="";
+importComsolMesh::usage="";
+importGmshMesh::usage="";
+importElfenMesh::usage="";
+convertToElementMesh::usage="";
+$importMeshFormatRouter::usage="";
+importMeshExamples::usage="";
+EndPackage[];
+
+
+(* ::Section:: *)
 (*Code*)
 
 
@@ -44,9 +66,80 @@ Begin["`Private`"];
 (* 
 Implementation for each mesh file format has its own private subcontext (e.g. ImportMesh`Private`Gmsh`).
 This is because low level helper functions (e.g. getNodes) are doing same things differently for different formats.
-Some common private functions are implemented in ImportMesh`Private` context and inside other subcontext they 
+Some common private functions are implemented in ImportMesh`Package` context and inside other subcontext they 
 to be called by their full name.
 *)
+
+
+(* ::Subsection:: *)
+(*The main public function*)
+
+
+(* This is declared first so that all package-level functions can inherit from it *)
+
+
+$importMeshFormatRouter=
+	<|
+		"inp"->
+			<|
+				"Name"->
+					"Abaqus",
+				"Function"->
+					importAbaqusMesh
+				|>,
+		"mes"->
+			<|
+				"Name"->
+					"Elfen",
+				"Function"->
+					importElfenMesh
+				|>,
+		"mphtxt"->
+			<|
+				"Name"->
+					"Comsol",
+				"Function"->
+					importComsolMesh
+				|>,
+		"msh"->
+			<|
+				"Name"->
+					"Gmsh",
+				"Function"->
+					importGmshMesh
+				|>
+		|>;
+
+
+Clear[ImportMesh]
+Options[ImportMesh]=
+	{
+		"ScaleSize"->1,
+		"SpatialDimension"->Automatic
+		};
+ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
+	FileExistsQ[file]||Message[ImportMesh::noopen,file]
+	):=
+		Module[
+			{scale, ext, fn, res},
+			(*PrintTemporary["Converting mesh..."];*)
+			ext=ToLowerCase[FileExtension[file]];
+			fn=
+				If[KeyExistsQ[$importMeshFormatRouter, ext],
+					$importMeshFormatRouter[ext, "Function"],
+					Message[ImportMesh::nosup, ext]
+					];
+			Catch[
+				res=
+					fn[
+						file, 
+						FilterRules[{opts}, 
+							Options[fn]
+							]
+						]
+				];
+			res/;Head[res]===NDSolve`FEM`ElementMesh
+		];
 
 
 (* ::Subsection::Closed:: *)
@@ -92,7 +185,7 @@ convertToElementMesh[nodes_,allElements_]:=Module[
 ]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Abaqus (.inp)*)
 
 
@@ -251,21 +344,13 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
-	{list,nodes,numbering,allElements,dim},
+Options[importAbaqusMesh]=
+	Options[ImportMesh];
+
+
+importAbaqusMesh[list_List, ops:OptionsPattern[]]:=Module[
+	{nodes,numbering,allElements,dim,scale},
 	
-	(* Abaqus is insensitive to whitespace so this is deleted. Lines starting with "**" are comments, so they
-	are deleted as well. *)
-	list=DeleteCases[
-		StringDelete[Whitespace]/@ToUpperCase@ReadList[
-			file,
-			Word,
-			RecordLists->True,
-			WordSeparators->{","},
-			RecordSeparators -> {"\n"}
-		],
-		{s_String/;StringStartsQ[s,"**"]}
-	];
 	(* Currently incremental node and element generation is not supported.*)
 	If[getPosition[list,"*NGEN"|"*ELGEN"]=!={},Message[ImportMesh::abaqus];Throw[$Failed]];
 	
@@ -275,10 +360,40 @@ ImportMesh`Private`importAbaqusMesh[file_,scale_:1]:=Module[
 	
 	(* Here we use the ugly hack. Value of global symbol $spatialDimension set at proccessing the element type 
 	is used to determine if we have 2D or 3D space mesh. *)
-	dim=$spatialDimension;
+	dim=
+		Replace[OptionValue["SpatialDimension"], 
+			{
+				Except[_?IntegerQ]:>$spatialDimension
+				}
+			];
 	
-	ImportMesh`Private`convertToElementMesh[nodes[[All,1;;dim]],allElements]
+	convertToElementMesh[nodes[[All,1;;dim]],allElements]
 ]
+
+
+importAbaqusMesh[file_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
+	importAbaqusMesh[
+		DeleteCases[
+			StringDelete[Whitespace]/@
+				ToUpperCase@
+					ReadList[
+						file,
+						Word,
+						RecordLists->True,
+						WordSeparators->{","},
+						RecordSeparators -> {"\n"}
+						],
+			{s_String/;StringStartsQ[s,"**"]}
+			],
+		opts
+		]
+
+
+importAbaqusMesh[str_String, opts:OptionsPattern[]]:=
+	importAbaqusMesh[
+		StringToStream[str],
+		opts
+		]
 
 
 End[]; (* "`Abaqus`" *)
@@ -353,10 +468,11 @@ getElements[list_,type_,length_,startElement_,startDomain_]:=With[
 (*Main function*)
 
 
-ImportMesh`Private`importComsolMesh[file_,scale_:1]:=Module[
-	{list,sdim,nodes,types,lengths,startElements,startMarkers,allElements},
+Options[importComsolMesh]=
+	Options[ImportMesh];
+importComsolMesh[list:{__String}, opts:OptionsPattern[]]:=Module[
+	{sdim,nodes,types,lengths,startElements,startMarkers,allElements},
 	
-	list=ReadList[file,String];
 	types=Flatten@StringCases[list,Whitespace~~x__~~" # type name":>x];
 	lengths=getNumber[list," # number of elements"];
 	startElements=getPosition[list,"# Elements"];
@@ -369,9 +485,14 @@ ImportMesh`Private`importComsolMesh[file_,scale_:1]:=Module[
 		{types,lengths,startElements,startMarkers}
 	];
 	
-	ImportMesh`Private`convertToElementMesh[nodes,allElements]
+	convertToElementMesh[nodes,allElements]
 ]
 
+
+importComsolMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
+	importComsolMesh[ReadList[file,String], opts];
+importComsolMesh[str_String, opts:OptionsPattern[]]:=
+	importComsolMesh[StringToStream[str], opts];
 
 
 End[]; (* "`Comsol`" *)
@@ -461,16 +582,25 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-ImportMesh`Private`importGmshMesh[file_,scale_:1]:=Module[
-	{list,nodes,markers,allElements},
+Options[importGmshMesh]=
+	Options[ImportMesh];
+
+
+importGmshMesh[list_List, opts:OptionsPattern[]]:=Module[
+	{nodes,markers,allElements},
 	
-	list=ReadList[file,String];
 	nodes=getNodes[list];
 	markers=getMarkers[list];
 	allElements=getElements[list];
 	
-	ImportMesh`Private`convertToElementMesh[nodes,allElements]
+	convertToElementMesh[nodes,allElements]
 ]
+
+
+importGmshMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
+	importGmshMesh[ReadList[file,String], opts];
+importGmshMesh[str_String, opts:OptionsPattern[]]:=
+	importGmshMesh[StringToStream[str], opts];
 
 
 End[]; (* "`Gmsh`" *)
@@ -559,50 +689,93 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-ImportMesh`Private`importElfenMesh[file_,scale_:1]:=Module[
-	{list,nodes,markers,allElements},
+Options[importElfenMesh]=
+	Options[ImportMesh];
+importElfenMesh[list_List, opts:OptionsPattern[]]:=Module[
+	{nodes,markers,allElements},
 	
-	list=ReadList[file,
-		Word,
-		RecordLists->True,
-		RecordSeparators -> {"#","\"","{","}","*","\n"}
-	]//Flatten;
 	nodes=getNodes[list];
 	allElements=getElements[list];
 	
-	ImportMesh`Private`convertToElementMesh[nodes,allElements]
+	convertToElementMesh[nodes,allElements]
 ]
+
+
+importElfenMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
+	importElfenMesh[
+		ReadList[file,
+				Word,
+				RecordLists->True,
+				RecordSeparators -> {"#","\"","{","}","*","\n"}
+			]//Flatten, 
+		scale
+		];
+importElfenMesh[str_String, opts:OptionsPattern[]]:=
+	importElfenMesh[StringToStream[str], scale];
 
 
 End[]; (* "`Elfen`" *)
 
 
 (* ::Subsection::Closed:: *)
-(*The main public function*)
+(*Register converters*)
 
 
-Options[ImportMesh]={"ScaleSize"->1};
-
-ImportMesh[file_,opts:OptionsPattern[]]:=Module[
-	{scale},
-	If[Not@TrueQ@FileExistsQ[file],Message[ImportMesh::noopen,file];Return[$Failed]];
-	
-	(* Obviously, mesh scaling factor has to be positive number.*)
-	scale=N@OptionValue["ScaleSize"];
-	If[Not@TrueQ@Positive[scale],scale=1.];
-	
-	(*PrintTemporary["Converting mesh..."];*)
-	Catch[
-	Switch[
-		FileExtension[file],
-		"inp",importAbaqusMesh[file,scale],
-		"mes",importElfenMesh[file,scale],
-		"mphtxt",importComsolMesh[file,scale],
-		"msh",importGmshMesh[file,scale],
-		_,Message[ImportMesh::nosup,FileExtension[file]];$Failed
+ImportExport`RegisterImport["AbaqusMesh", 
+	importAbaqusMesh,
+	"FunctionChannels"->{"Streams"}
+	];
+ImportExport`RegisterImport["ComsolMesh", 
+	importComsolMesh,
+	"FunctionChannels"->{"Streams"} 
+	];
+ImportExport`RegisterImport["GmshMesh", 
+	importGmshMesh,
+	"FunctionChannels"->{"Streams"} 
+	];
+ImportExport`RegisterImport["ElfenMesh", 
+	importElfenMesh,
+	"FunctionChannels"->{"Streams"} 
+	];
+Map[
+	ImportExport`RegisterImport[#, ImportMesh]&,
+	ToUpperCase@Keys@$importMeshFormatRouter
 	]
-	]
-]
+
+
+(* ::Subsection:: *)
+(*Tests*)
+
+
+$examplesDir=
+	FileNameJoin@{DirectoryName[$InputFileName], "Tests"};
+
+
+importMeshExamples[s_String]:=
+	Module[
+		{
+			nm=$importMeshFormatRouter[s]["Name"],
+			fmt=s,
+			files
+			},
+			If[!StringQ@nm, 
+				nm=
+					Replace[
+						Keys@Select[$importMeshFormatRouter, #Name===s&],
+						{
+							f_
+							}:>(nm=s;fmt=f)
+						]
+				];
+		files=
+			If[StringQ@nm,
+				FileNames["*."<>fmt, 
+					FileNameJoin@{$examplesDir, nm}
+					],
+				Message[ImportMesh::nosup, s]
+				];
+		files/;ListQ@files
+		];
 
 
 (* ::Section::Closed:: *)
