@@ -38,6 +38,7 @@ ImportMesh::usage="ImportMesh[stream, fmt] imports the InputStream stream in the
 ImportMesh::nosup="Mesh file format \".`1`\" is currently not supported.";
 ImportMesh::eltype="Element type `1` is not supported.";
 ImportMesh::abaqus="Incremental node or element generation (*NGEN and *ELGEN keywords) is not supported.";
+ImportMesh::fail="Failed to extract mesh from ``";
 
 
 (* ::Section:: *)
@@ -129,15 +130,16 @@ ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
 					$importMeshFormatRouter[ext, "Function"],
 					Message[ImportMesh::nosup, ext]
 					];
-			Catch[
-				res=
+			res=
+				Catch[
 					fn[
-						file, 
+						file,
 						FilterRules[{opts}, 
 							Options[fn]
 							]
 						]
-				];
+					];
+			If[res===$Failed, Message[ImportMesh::fail, file]];
 			res/;Head[res]===NDSolve`FEM`ElementMesh
 		];
 
@@ -340,7 +342,7 @@ getElements[list_]:=Module[
 ]
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Main function*)
 
 
@@ -371,7 +373,7 @@ importAbaqusMesh[list_List, ops:OptionsPattern[]]:=Module[
 ]
 
 
-importAbaqusMesh[file_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
+importAbaqusMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
 	importAbaqusMesh[
 		DeleteCases[
 			StringDelete[Whitespace]/@
@@ -399,7 +401,7 @@ importAbaqusMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Abaqus`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Comsol (.mphtxt)*)
 
 
@@ -606,7 +608,7 @@ importGmshMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Gmsh`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Elfen (.mes)*)
 
 
@@ -703,44 +705,39 @@ importElfenMesh[list_List, opts:OptionsPattern[]]:=Module[
 
 importElfenMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
 	importElfenMesh[
-		ReadList[file,
-				Word,
-				RecordLists->True,
-				RecordSeparators -> {"#","\"","{","}","*","\n"}
+		ReadList[
+			file,
+			Word,
+			RecordLists->True,
+			RecordSeparators -> {"#","\"","{","}","*","\n"}
 			]//Flatten, 
-		scale
+		opts
 		];
 importElfenMesh[str_String, opts:OptionsPattern[]]:=
-	importElfenMesh[StringToStream[str], scale];
+	importElfenMesh[StringToStream[str], opts];
 
 
 End[]; (* "`Elfen`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Register converters*)
 
 
-ImportExport`RegisterImport["AbaqusMesh", 
-	importAbaqusMesh,
-	"FunctionChannels"->{"Streams"}
+KeyValueMap[
+	Function[
+		ImportExport`RegisterImport[#2["Name"]<>"Mesh", 
+			#2["Function"],
+			"FunctionChannels"->{"Streams"}
+			];
+		ImportExport`RegisterImport[ToUpperCase@#, 
+			#2["Function"],
+			"FunctionChannels"->{"Streams"}
+			]
+		],
+	$importMeshFormatRouter
 	];
-ImportExport`RegisterImport["ComsolMesh", 
-	importComsolMesh,
-	"FunctionChannels"->{"Streams"} 
-	];
-ImportExport`RegisterImport["GmshMesh", 
-	importGmshMesh,
-	"FunctionChannels"->{"Streams"} 
-	];
-ImportExport`RegisterImport["ElfenMesh", 
-	importElfenMesh,
-	"FunctionChannels"->{"Streams"} 
-	];
-Map[
-	ImportExport`RegisterImport[#, ImportMesh]&,
-	ToUpperCase@Keys@$importMeshFormatRouter
-	]
+ImportExport`RegisterImport["ElementMesh", ImportMesh]
 
 
 (* ::Subsection:: *)
