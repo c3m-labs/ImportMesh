@@ -51,7 +51,7 @@ importComsolMesh::usage="";
 importGmshMesh::usage="";
 importElfenMesh::usage="";
 convertToElementMesh::usage="";
-$importMeshFormatRouter::usage="";
+$importMeshFormats::usage="";
 importMeshExamples::usage="";
 EndPackage[];
 
@@ -79,35 +79,43 @@ to be called by their full name.
 (* This is declared first so that all package-level functions can inherit from it *)
 
 
-$importMeshFormatRouter=
+$importMeshFormats=
 	<|
 		"inp"->
 			<|
 				"Name"->
 					"Abaqus",
 				"Function"->
-					importAbaqusMesh
+					importAbaqusMesh,
+				"Elements"->
+					{}
 				|>,
 		"mes"->
 			<|
 				"Name"->
 					"Elfen",
 				"Function"->
-					importElfenMesh
+					importElfenMesh,
+				"Elements"->
+					{}
 				|>,
 		"mphtxt"->
 			<|
 				"Name"->
 					"Comsol",
 				"Function"->
-					importComsolMesh
+					importComsolMesh,
+				"Elements"->
+					{}
 				|>,
 		"msh"->
 			<|
 				"Name"->
 					"Gmsh",
 				"Function"->
-					importGmshMesh
+					importGmshMesh,
+				"Elements"->
+					{}
 				|>
 		|>;
 
@@ -116,7 +124,8 @@ Clear[ImportMesh]
 Options[ImportMesh]=
 	{
 		"ScaleSize"->1,
-		"SpatialDimension"->Automatic
+		"SpatialDimension"->Automatic,
+		"ReturnElement"->"Mesh"
 		};
 ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
 	FileExistsQ[file]||Message[ImportMesh::noopen,file]
@@ -126,8 +135,8 @@ ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
 			(*PrintTemporary["Converting mesh..."];*)
 			ext=ToLowerCase[FileExtension[file]];
 			fn=
-				If[KeyExistsQ[$importMeshFormatRouter, ext],
-					$importMeshFormatRouter[ext, "Function"],
+				If[KeyExistsQ[$importMeshFormats, ext],
+					$importMeshFormats[ext, "Function"],
 					Message[ImportMesh::nosup, ext]
 					];
 			res=
@@ -206,6 +215,9 @@ new line in a text file and this has to be somehow taken into account.
 (*Process elements*)
 
 
+$spatialDimension=3;
+
+
 (* This "type" argumet it the next few functions is used only to issue a message with ful element type string. *)
 processLine[type_,string_]:=Which[
 	StringStartsQ[string,"1"],{LineElement,2},
@@ -236,7 +248,9 @@ processContinuumType[type_,inString_]:=Module[
 	{string=inString},
 	Which[
 		StringStartsQ[string,"PS"|"PE"|"AX"],
-		string=StringTrim[string,"PS"|"PE"|"AX"];$spatialDimension=2;processSurface[type,string]
+		string=StringTrim[string,"PS"|"PE"|"AX"];
+		$spatialDimension=2;
+		processSurface[type,string]
 		,
 		StringStartsQ[string,"3D"],
 		string=StringTrim[string,"3D"];processVolume[type,string]
@@ -342,34 +356,42 @@ getElements[list_]:=Module[
 ]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Main function*)
 
 
 Options[importAbaqusMesh]=
 	Options[ImportMesh];
-
-
+$importMeshFormats["inp", "Elements"]=
+	{
+		"MeshNodes",
+		"MeshElements"
+		};
 importAbaqusMesh[list_List, ops:OptionsPattern[]]:=Module[
-	{nodes,numbering,allElements,dim,scale},
+	{nodes,numbering,allElements,dim, scale, ret=OptionValue["ReturnElement"]},
 	
 	(* Currently incremental node and element generation is not supported.*)
 	If[getPosition[list,"*NGEN"|"*ELGEN"]=!={},Message[ImportMesh::abaqus];Throw[$Failed]];
 	
 	{numbering,nodes}=getNodes[list];
-	$nodeNumbering=MapIndexed[#1->First[#2]&,numbering];
+	
+	$nodeNumbering=MapIndexed[#1->First[#2]&, numbering];
+	
 	allElements=getElements[list];
+	If[ret==="MeshElements", Return[allElements]];
 	
 	(* Here we use the ugly hack. Value of global symbol $spatialDimension set at proccessing the element type 
-	is used to determine if we have 2D or 3D space mesh. *)
+		is used to determine if we have 2D or 3D space mesh. *)
 	dim=
 		Replace[OptionValue["SpatialDimension"], 
 			{
 				Except[_?IntegerQ]:>$spatialDimension
 				}
 			];
-	
-	convertToElementMesh[nodes[[All,1;;dim]],allElements]
+	nodes=nodes[[All,1;;dim]];
+	If[ret==="MeshNodes", Return[nodes]];
+				
+	convertToElementMesh[nodes,allElements]
 ]
 
 
@@ -472,20 +494,38 @@ getElements[list_,type_,length_,startElement_,startDomain_]:=With[
 
 Options[importComsolMesh]=
 	Options[ImportMesh];
+$importMeshFormats["mphtxt", "Elements"]=
+	{
+		"MeshElements",
+		"MeshNodes",
+		"MeshTypes",
+		"MeshStartElements",
+		"MeshMarkers"
+		};
 importComsolMesh[list:{__String}, opts:OptionsPattern[]]:=Module[
-	{sdim,nodes,types,lengths,startElements,startMarkers,allElements},
+	{sdim,nodes,types,lengths,startElements,startMarkers,
+		allElements,
+		ret=OptionValue["ReturnElement"]
+		},
 	
 	types=Flatten@StringCases[list,Whitespace~~x__~~" # type name":>x];
+	If[ret==="MeshTypes", Return[types]];
 	lengths=getNumber[list," # number of elements"];
 	startElements=getPosition[list,"# Elements"];
+	If[ret==="MeshStartElements", Return[startElements]];
 	(* I think both "Domains"  and "Geometric entity indices" can be considered as markers. *)
 	startMarkers=getPosition[list,"# Domains"|"# Geometric entity indices"];
-
+	If[ret==="MeshMarkers", Return[startMarkers]];
+	
 	nodes=getNodes[list];
+	If[ret==="MeshNodes", Return[nodes]];
+	
+	
 	allElements=MapThread[
 		getElements[list,#1,#2,#3,#4]&,
 		{types,lengths,startElements,startMarkers}
 	];
+	If[ret==="MeshElements", Return[allElements]];
 	
 	convertToElementMesh[nodes,allElements]
 ]
@@ -500,7 +540,7 @@ importComsolMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Comsol`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Gmsh (.msh)*)
 
 
@@ -586,14 +626,21 @@ getElements[list_]:=Module[
 
 Options[importGmshMesh]=
 	Options[ImportMesh];
-
-
+$importMeshFormats["msh", "Elements"]=
+	{
+		"MeshElements",
+		"MeshNodes",
+		"MeshMarkers"
+		};
 importGmshMesh[list_List, opts:OptionsPattern[]]:=Module[
-	{nodes,markers,allElements},
+	{nodes,markers,allElements, ret=OptionValue["ReturnElement"]},
 	
 	nodes=getNodes[list];
+	If[ret==="MeshNodes", Return[nodes]];
 	markers=getMarkers[list];
+	If[ret==="MeshMarkers", Return[markers]];
 	allElements=getElements[list];
+	If[ret==="MeshElements", Return[allElements]];
 	
 	convertToElementMesh[nodes,allElements]
 ]
@@ -693,11 +740,18 @@ getElements[list_]:=Module[
 
 Options[importElfenMesh]=
 	Options[ImportMesh];
+$importMeshFormats["mes", "Elements"]=
+	{
+		"MeshElements",
+		"MeshNodes"
+		};
 importElfenMesh[list_List, opts:OptionsPattern[]]:=Module[
-	{nodes,markers,allElements},
+	{nodes,markers,allElements,ret=OptionValue["ReturnElement"]},
 	
 	nodes=getNodes[list];
+	If[ret==="MeshNodes", Return[nodes]];
 	allElements=getElements[list];
+	If[ret==="MeshElements", Return[allElements]];
 	
 	convertToElementMesh[nodes,allElements]
 ]
@@ -724,20 +778,52 @@ End[]; (* "`Elfen`" *)
 (*Register converters*)
 
 
-KeyValueMap[
-	Function[
-		ImportExport`RegisterImport[#2["Name"]<>"Mesh", 
-			#2["Function"],
-			"FunctionChannels"->{"Streams"}
-			];
-		ImportExport`RegisterImport[ToUpperCase@#, 
-			#2["Function"],
-			"FunctionChannels"->{"Streams"}
-			]
-		],
-	$importMeshFormatRouter
+(* ::Text:: *)
+(*Provide converters for the different mesh types defined*)
+
+
+$importRegistered//Clear
+
+
+If[!TrueQ@$importRegistered,
+	KeyValueMap[
+		Function[
+			With[
+				{
+					func=#2["Function"], 
+					names=ToUpperCase@{#, #2["Name"]<>"Mesh"}, 
+					els=#2["Elements"]
+					},
+				Map[
+					Function[
+						ImportExport`RegisterImport[#,
+							Join[
+								Map[
+									With[{el=#},
+										el:>
+											Function[{el->func[##, "ReturnElement"->el]}]
+										]&,
+									els
+									],
+								{
+									"Mesh":>Function[{"Mesh"->func[##]}],
+									"Elements":>Function[{"Elements"->Prepend[els, "Mesh"]}],
+									func
+									}
+								],
+							"FunctionChannels"->{"Streams"},
+							"AvailableElements"->Prepend[els, "Mesh"]
+							]
+						],
+					names
+					]
+				]
+			],
+		$importMeshFormats
+		];
+	ImportExport`RegisterImport["ElementMesh", ImportMesh]
 	];
-ImportExport`RegisterImport["ElementMesh", ImportMesh]
+$importRegistered=True
 
 
 (* ::Subsection:: *)
@@ -751,14 +837,14 @@ $examplesDir=
 importMeshExamples[s_String]:=
 	Module[
 		{
-			nm=$importMeshFormatRouter[s]["Name"],
+			nm=$importMeshFormats[s]["Name"],
 			fmt=s,
 			files
 			},
 			If[!StringQ@nm, 
 				nm=
 					Replace[
-						Keys@Select[$importMeshFormatRouter, #Name===s&],
+						Keys@Select[$importMeshFormats, #Name===s&],
 						{
 							f_
 							}:>(nm=s;fmt=f)
