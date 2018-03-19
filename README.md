@@ -30,7 +30,9 @@ For example:
 
 ```mathematica
 
-meshExample = ImportMesh`Package`importMeshExamples["msh"][[1]];
+meshExample =
+ URLDownload@
+  "https://raw.githubusercontent.com/c3m-labs/ImportMesh/master/Tests/Gmsh/box_H1.msh";
 Import[meshExample, "ElementMesh"]["Wireframe"]
 ```
 
@@ -40,7 +42,9 @@ Support is also provided for import as a string if the format type of the file i
 
 ```mathematica
 
-inpText = ReadString@ImportMesh`Package`importMeshExamples["inp"][[5]];
+inpText =
+  ReadString@
+   "https://raw.githubusercontent.com/c3m-labs/ImportMesh/master/Tests/Abaqus/nle1xf4f.inp";
 ImportString[inpText, "AbaqusMesh"]["Wireframe"]
 ```
 
