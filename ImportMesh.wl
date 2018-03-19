@@ -29,9 +29,9 @@ BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 (*Messages*)
 
 
-ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.";
-ImportMesh::usage="ImportMesh[\"string\", fmt] imports \"string\" in the specified format";
-ImportMesh::usage="ImportMesh[stream, fmt] imports the InputStream stream in the specified format";
+ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.
+ImportMesh[\"string\", fmt] imports \"string\" in the specified format
+ImportMesh[stream, fmt] imports the InputStream stream in the specified format";
 
 
 (* All error/warning messages are currently attached to the only public symbol. *)
@@ -149,7 +149,7 @@ ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
 						]
 					];
 			If[res===$Failed, Message[ImportMesh::fail, file]];
-			res/;Head[res]===NDSolve`FEM`ElementMesh
+			res/;MatchQ[res, _NDSolve`FEM`ElementMesh|$Failed]
 		];
 
 
