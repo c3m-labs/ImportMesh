@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Header comments*)
 
 
@@ -13,19 +13,15 @@
 (* :Mathematica Version: 11.2 *)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Begin package*)
 
 
-(* ::Input:: *)
-(*MakeIndentable[]*)
-
-
-(* Mathematica FEM functionality is needed. *)
+(* Mathematica FEM functionality (context "NDSolve`FEM`") is needed. *)
 BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
-(* ::Section:: *)
+(* ::Subsection::Closed:: *)
 (*Messages*)
 
 
@@ -41,9 +37,13 @@ ImportMesh::abaqus="Incremental node or element generation (*NGEN and *ELGEN key
 ImportMesh::fail="Failed to extract mesh from ``";
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Package Level Functions*)
 
+
+(* The purpose of this public "`Package`" subcontext is that it makes implementation functions more available. 
+ It won't be loaded by default into the $ContextPath, but it can then be loaded by Needs["ImportMesh`Package`"] 
+ for those who are interested in doing more development work. *)
 
 BeginPackage["`Package`"];
 importAbaqusMesh::usage="";
@@ -56,7 +56,7 @@ importMeshExamples::usage="";
 EndPackage[];
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Code*)
 
 
@@ -72,7 +72,7 @@ to be called by their full name.
 *)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*The main public function*)
 
 
@@ -119,6 +119,9 @@ $importMeshFormats=
 				|>
 		|>;
 
+
+(* In the case that importing mesh file is not successful the function ImportMesh should return $Failed, 
+just like the system function Import. *)
 
 Clear[ImportMesh]
 Options[ImportMesh]=
@@ -196,7 +199,7 @@ convertToElementMesh[nodes_,allElements_]:=Module[
 ]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Abaqus (.inp)*)
 
 
@@ -204,21 +207,22 @@ convertToElementMesh[nodes_,allElements_]:=Module[
 Begin["`Abaqus`"];
 
 (*
-Abaqus has quite involved specification of .inp input file. A lot of code is used to extract element topology
-(e.g. TetrahedronElement) its order from element type string (e.g. "TYPE=C3D20R"). 
+Abaqus has quite involved specification of .inp input file. Majority of code in this subcontext is needed just to 
+extract element topology (e.g. HexahedronElement) and its order from element type string (e.g. "TYPE=C3D20R"). 
 Another problem is that element connectivity specification for elements with a lot of nodes sometimes breaks to a 
 new line in a text file and this has to be somehow taken into account.
-  *)
+*)
 
 
 (* ::Subsubsection::Closed:: *)
 (*Process elements*)
 
 
+(* This is a quick ugly hack to pass around spatial dimension that relies on this global symbol. *)
 $spatialDimension=3;
 
 
-(* This "type" argumet it the next few functions is used only to issue a message with ful element type string. *)
+(* This "type" argumet it the next few functions is used only to issue a message with full element type string. *)
 processLine[type_,string_]:=Which[
 	StringStartsQ[string,"1"],{LineElement,2},
 	StringStartsQ[string,"2"],{LineElement,3},
@@ -266,7 +270,6 @@ processElementType[type_String]:=Module[
 	keysCont=Alternatives@@{"C","DC","Q"};
 	keysStruct=Alternatives@@{"M3D","DS","STRI","S"};
 	
-	(* This is a quick ugly hack to pass around spatial dimension.*)
 	$spatialDimension=3;
 	
 	Which[
@@ -423,7 +426,7 @@ importAbaqusMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Abaqus`" *)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Comsol (.mphtxt)*)
 
 
@@ -540,7 +543,7 @@ importComsolMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Comsol`" *)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Gmsh (.msh)*)
 
 
@@ -655,7 +658,7 @@ importGmshMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Gmsh`" *)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Elfen (.mes)*)
 
 
@@ -774,7 +777,7 @@ importElfenMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Elfen`" *)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Register converters*)
 
 
@@ -826,7 +829,7 @@ If[!TrueQ@$importRegistered,
 $importRegistered=True
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Tests*)
 
 
