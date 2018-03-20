@@ -20,7 +20,7 @@ The only (currently) public function is  `ImportMesh`. It creates `ElementMesh` 
     mesh=ImportMesh["path/to/your_mesh_file"];
     mesh["Wireframe"]
 
-![screenshot](https://i.imgur.com/OpzA8J5.png "Quad mesh")
+![screenshot](https://imgur.com/aq92uqA.gif "Geometry source: https://grabcad.com/library/goose-2")
 
 There are also functions in the ``"`Package`"`` subcontext that implement `ImportMesh`.
 
