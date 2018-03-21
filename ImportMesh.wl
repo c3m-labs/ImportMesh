@@ -6,11 +6,11 @@
 
 (* :Title: ImportMesh *)
 (* :Context: ImportMesh` *)
-(* :Author: Matevz Pintar, C3M, Slovenia *)
+(* :Author: Pintar M, C3M, Slovenia *)
 (* :Summary: Utilities for importing FEM meshes from other software. *)
 (* :Copyright: C3M d.o.o., 2018 *)
-(* :Package Version: 0.2.0 *)
-(* :Mathematica Version: 11.2 *)
+
+(* :Acknowledgements: Thank you: b3m2a1 *)
 
 
 (* ::Section::Closed:: *)
