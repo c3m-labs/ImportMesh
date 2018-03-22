@@ -17,6 +17,9 @@
 (*Begin package*)
 
 
+If[$VersionNumber<11,Print["Package requires Mathematica 11 or higher."];Abort[]];
+
+
 (* Mathematica FEM functionality (context "NDSolve`FEM`") is needed. *)
 BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
@@ -321,7 +324,7 @@ getNodes[list_]:=Module[
 	numbering=ToExpression[allNodeData[[All,1]]];
 	crds=Map[
 		Internal`StringToDouble,
-		allNodeData[[All,2;;UpTo[4]]],
+		allNodeData[[All,2;;]],
 		{2}
 	];
 	{numbering,crds}
