@@ -29,8 +29,8 @@ BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
 ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.
-ImportMesh[\"string\", fmt] imports \"string\" in the specified format
-ImportMesh[stream, fmt] imports the InputStream stream in the specified format";
+ImportMesh[\"string\", fmt] imports \"string\" in the specified format.
+ImportMesh[stream, fmt] imports the InputStream stream in the specified format.";
 
 
 (* All error/warning messages are currently attached to the only public symbol. *)
@@ -55,7 +55,6 @@ importGmshMesh::usage="";
 importElfenMesh::usage="";
 convertToElementMesh::usage="";
 $importMeshFormats::usage="";
-importMeshExamples::usage="";
 EndPackage[];
 
 
@@ -830,41 +829,6 @@ If[!TrueQ@$importRegistered,
 	ImportExport`RegisterImport["ElementMesh", ImportMesh]
 	];
 $importRegistered=True
-
-
-(* ::Subsection::Closed:: *)
-(*Tests*)
-
-
-$examplesDir=
-	FileNameJoin@{DirectoryName[$InputFileName], "Tests"};
-
-
-importMeshExamples[s_String]:=
-	Module[
-		{
-			nm=$importMeshFormats[s]["Name"],
-			fmt=s,
-			files
-			},
-			If[!StringQ@nm, 
-				nm=
-					Replace[
-						Keys@Select[$importMeshFormats, #Name===s&],
-						{
-							f_
-							}:>(nm=s;fmt=f)
-						]
-				];
-		files=
-			If[StringQ@nm,
-				FileNames["*."<>fmt, 
-					FileNameJoin@{$examplesDir, nm}
-					],
-				Message[ImportMesh::nosup, s]
-				];
-		files/;ListQ@files
-		];
 
 
 (* ::Section::Closed:: *)
