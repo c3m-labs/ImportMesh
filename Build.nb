@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     16470,        411]
-NotebookOptionsPosition[     14384,        365]
-NotebookOutlinePosition[     14756,        381]
-CellTagsIndexPosition[     14713,        378]
+NotebookDataLength[     16869,        419]
+NotebookOptionsPosition[     14784,        373]
+NotebookOutlinePosition[     15155,        389]
+CellTagsIndexPosition[     15112,        386]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -80,7 +80,7 @@ Cell[BoxData[{
       RowBox[{"original", ",", "copy"}], "]"}], ";"}]}], 
    "\[IndentingNewLine]", "]"}]}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[12]:=",ExpressionUUID->"102a3a00-453d-4faf-904c-4a47bcfe4b0b"],
+ CellLabel->"In[24]:=",ExpressionUUID->"102a3a00-453d-4faf-904c-4a47bcfe4b0b"],
 
 Cell[BoxData[{
  RowBox[{
@@ -113,7 +113,7 @@ Cell[BoxData[{
        RowBox[{"original", ",", "copy"}], "]"}]}], "\[IndentingNewLine]", 
      "]"}]}], "\[IndentingNewLine]", "]"}]}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[14]:=",ExpressionUUID->"0a6823d9-a718-45ba-bfa0-24d3f9caab5e"],
+ CellLabel->"In[26]:=",ExpressionUUID->"0a6823d9-a718-45ba-bfa0-24d3f9caab5e"],
 
 Cell[BoxData[{
  RowBox[{
@@ -132,7 +132,7 @@ Cell[BoxData[{
      RowBox[{"{", 
       RowBox[{"targetDir", ",", "name"}], "}"}], "]"}]}], "]"}]}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[16]:=",ExpressionUUID->"696c7bc0-ee0e-49ed-9f7b-da110c2e6a0d"],
+ CellLabel->"In[28]:=",ExpressionUUID->"696c7bc0-ee0e-49ed-9f7b-da110c2e6a0d"],
 
 Cell[BoxData[
  RowBox[{
@@ -168,7 +168,7 @@ Cell[BoxData[
        RowBox[{"NotebookClose", "[", "nb", "]"}], ";"}]}], 
      "\[IndentingNewLine]", "]"}]}]}]}]], "Input",
  InitializationCell->True,
- CellLabel->"In[18]:=",ExpressionUUID->"7af28f76-d927-4513-ba61-71057b439eff"]
+ CellLabel->"In[30]:=",ExpressionUUID->"7af28f76-d927-4513-ba61-71057b439eff"]
 }, Closed]],
 
 Cell[CellGroupData[{
@@ -197,7 +197,8 @@ Cell[BoxData[{
     RowBox[{"{", 
      RowBox[{
       RowBox[{"\"\<EncodeQ\>\"", "\[Rule]", "False"}], ",", 
-      RowBox[{"\"\<Build\>\"", "\[Rule]", "\"\<rc\>\""}]}], "}"}]}], ";"}], 
+      RowBox[{"\"\<Build\>\"", "\[Rule]", "\"\<rc\>\""}], ",", 
+      RowBox[{"\"\<MakePacletQ\>\"", "\[Rule]", "True"}]}], "}"}]}], ";"}], 
   "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"buildRelease", "[", 
@@ -208,12 +209,16 @@ Cell[BoxData[{
    RowBox[{
     RowBox[{"{", 
      RowBox[{
-     "tmpDir", ",", "file", ",", "appName", ",", "encoded", ",", "extension", 
-      ",", "build"}], "}"}], ",", "\[IndentingNewLine]", 
+     "tmpDir", ",", "file", ",", "appName", ",", "encoded", ",", "pacletQ", 
+      ",", "extension", ",", "build"}], "}"}], ",", "\[IndentingNewLine]", 
     RowBox[{
      RowBox[{"encoded", "=", 
       RowBox[{"TrueQ", "@", 
        RowBox[{"OptionValue", "[", "\"\<EncodeQ\>\"", "]"}]}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"pacletQ", "=", 
+      RowBox[{"TrueQ", "@", 
+       RowBox[{"OptionValue", "[", "\"\<MakePacletQ\>\"", "]"}]}]}], ";", 
      "\[IndentingNewLine]", 
      RowBox[{"build", "=", 
       RowBox[{"OptionValue", "[", "\"\<Build\>\"", "]"}]}], ";", 
@@ -232,12 +237,17 @@ Cell[BoxData[{
         RowBox[{"installation", "!"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
      RowBox[{"appName", "=", "\"\<ImportMesh\>\""}], ";", 
      "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{"Not", "@", 
+        RowBox[{"DirectoryQ", "[", "targetDir", "]"}]}], ",", 
+       RowBox[{"CreateDirectory", "[", "targetDir", "]"}]}], "]"}], ";", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
      RowBox[{"tmpDir", "=", 
       RowBox[{"FileNameJoin", "[", 
        RowBox[{"{", 
-        RowBox[{
-         RowBox[{"NotebookDirectory", "[", "]"}], ",", "appName"}], "}"}], 
-       "]"}]}], ";", "\[IndentingNewLine]", 
+        RowBox[{"targetDir", ",", "appName"}], "}"}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
      RowBox[{"If", "[", 
       RowBox[{
        RowBox[{"DirectoryQ", "[", "tmpDir", "]"}], ",", 
@@ -300,11 +310,9 @@ Cell[BoxData[{
        RowBox[{"creates", " ", ".", "zip"}], " ", 
        RowBox[{"file", "."}]}], " ", "*)"}], "\[IndentingNewLine]", 
      RowBox[{"If", "[", 
-      RowBox[{
-       RowBox[{"Not", "@", 
-        RowBox[{"DirectoryQ", "[", "targetDir", "]"}]}], ",", 
-       RowBox[{"CreateDirectory", "[", "targetDir", "]"}]}], "]"}], ";", 
-     "\[IndentingNewLine]", 
+      RowBox[{"pacletQ", ",", 
+       RowBox[{"PackPaclet", "[", "tmpDir", "]"}]}], "]"}], ";", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
      RowBox[{"file", "=", 
       RowBox[{"CreateArchive", "[", "\[IndentingNewLine]", 
        RowBox[{"tmpDir", ",", "\[IndentingNewLine]", 
@@ -313,7 +321,7 @@ Cell[BoxData[{
           RowBox[{"targetDir", ",", 
            RowBox[{"StringJoin", "[", 
             RowBox[{
-            "appName", ",", "\"\<_\>\"", ",", "version", ",", "extension", 
+            "appName", ",", "\"\<-\>\"", ",", "version", ",", "extension", 
              ",", "\"\<.zip\>\""}], "]"}]}], "}"}], "]"}]}], 
        "\[IndentingNewLine]", "]"}]}], ";", "\[IndentingNewLine]", 
      "\[IndentingNewLine]", 
@@ -327,7 +335,7 @@ Cell[BoxData[{
         RowBox[{"Return", "[", "file", "]"}]}]}], "\[IndentingNewLine]", 
       "]"}]}]}], "\[IndentingNewLine]", "]"}]}]}], "Input",
  InitializationCell->True,
- CellLabel->"In[20]:=",ExpressionUUID->"63aec28b-d38e-4e62-be48-217324e2e21b"]
+ CellLabel->"In[32]:=",ExpressionUUID->"63aec28b-d38e-4e62-be48-217324e2e21b"]
 }, Closed]]
 }, Closed]],
 
@@ -353,18 +361,18 @@ Cell[BoxData[
          RowBox[{"ParentDirectory", "@", 
           RowBox[{"NotebookDirectory", "[", "]"}]}], ",", "\"\<Release\>\""}],
          "}"}], "]"}]}], ",", "\[IndentingNewLine]", 
-     RowBox[{"version", "=", "\"\<0.3.0\>\""}]}], "\[IndentingNewLine]", 
+     RowBox[{"version", "=", "\"\<0.3.1\>\""}]}], "\[IndentingNewLine]", 
     "}"}], ",", "\[IndentingNewLine]", 
    RowBox[{"buildRelease", "[", 
     RowBox[{"releaseDir", ",", "version", ",", "\[IndentingNewLine]", 
      RowBox[{"\"\<Build\>\"", "\[Rule]", "None"}]}], "\[IndentingNewLine]", 
     "]"}]}], "\[IndentingNewLine]", "]"}]], "Input",
- CellLabel->"In[23]:=",ExpressionUUID->"76883db4-7326-4ddb-8f13-a8e36fb15d0f"]
+ CellLabel->"In[35]:=",ExpressionUUID->"76883db4-7326-4ddb-8f13-a8e36fb15d0f"]
 }, Open  ]]
 }, Open  ]]
 },
 AutoGeneratedPackage->None,
-WindowSize->{1012, 1086},
+WindowSize->{983, 1086},
 WindowMargins->{{Automatic, -13}, {Automatic, 0}},
 FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
 StyleDefinitions->"Default.nb"
@@ -403,14 +411,14 @@ Cell[4862, 136, 1469, 34, 248, "Input",ExpressionUUID->"7af28f76-d927-4513-ba61-
 Cell[CellGroupData[{
 Cell[6368, 175, 99, 0, 45, "Subsubsection",ExpressionUUID->"1ce70ee8-2311-4307-b7a1-b037ea97aeeb"],
 Cell[6470, 177, 385, 5, 99, "Text",ExpressionUUID->"6dc97f5e-8f26-4b18-9563-bc256d99c821"],
-Cell[6858, 184, 6296, 145, 1280, "Input",ExpressionUUID->"63aec28b-d38e-4e62-be48-217324e2e21b",
+Cell[6858, 184, 6696, 153, 1376, "Input",ExpressionUUID->"63aec28b-d38e-4e62-be48-217324e2e21b",
  InitializationCell->True]
 }, Closed]]
 }, Closed]],
 Cell[CellGroupData[{
-Cell[13203, 335, 92, 0, 46, "Subsection",ExpressionUUID->"2d1e6de4-2552-47a3-ac1f-7684442f7a5d"],
-Cell[13298, 337, 246, 4, 71, "Text",ExpressionUUID->"2ad44800-63c7-4bbf-bc29-8ec8525f41e6"],
-Cell[13547, 343, 809, 18, 204, "Input",ExpressionUUID->"76883db4-7326-4ddb-8f13-a8e36fb15d0f"]
+Cell[13603, 343, 92, 0, 46, "Subsection",ExpressionUUID->"2d1e6de4-2552-47a3-ac1f-7684442f7a5d"],
+Cell[13698, 345, 246, 4, 71, "Text",ExpressionUUID->"2ad44800-63c7-4bbf-bc29-8ec8525f41e6"],
+Cell[13947, 351, 809, 18, 204, "Input",ExpressionUUID->"76883db4-7326-4ddb-8f13-a8e36fb15d0f"]
 }, Open  ]]
 }, Open  ]]
 }
