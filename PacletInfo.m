@@ -6,12 +6,19 @@ Paclet[
 	Version -> "0.3.1",
 	WolframVersion -> "11.+",
     Description -> "Utilities for importing FEM meshes from other software.",
-    Creator -> "info@c3m.si",
+    Creator -> "Matevz Pintar",
     Publisher->"C3M d.o.o.",
     URL -> "https://github.com/c3m-labs/ImportMesh",
-    Tags -> {"finite-elements","mesh","import"},
-    Categories -> {"FEM"},
-	Extensions -> {
-		{"Kernel", Root -> ".", Context ->{"ImportMesh`"}}
+    Extensions -> {
+		{"Kernel",
+			Root -> ".",
+			Context ->{"ImportMesh`"}
+		},
+		{"PacletServer",
+			"Tags" -> {"finite-elements","mesh","FEM","import"},
+			"Categories" -> {"FEM"},
+			"Description" -> "Utilities for importing FEM meshes from other software.",
+			"License" -> "MIT"
+		}
 	}
 ]
