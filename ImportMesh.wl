@@ -38,6 +38,7 @@ ImportMesh::nosup="Mesh file format \".`1`\" is currently not supported.";
 ImportMesh::eltype="Element type `1` is not supported.";
 ImportMesh::abaqus="Incremental node or element generation (*NGEN and *ELGEN keywords) is not supported.";
 ImportMesh::fail="Failed to extract mesh from ``";
+ImportMesh::gmshfrmt="GMSH file format version `1` is not supported.";
 
 
 (* ::Section::Closed:: *)
@@ -638,7 +639,13 @@ $importMeshFormats["msh", "Elements"]=
 		"MeshMarkers"
 		};
 importGmshMesh[list_List, opts:OptionsPattern[]]:=Module[
-	{nodes,markers,allElements, ret=OptionValue["ReturnElement"]},
+	{version,nodes,markers,allElements, ret=OptionValue["ReturnElement"]},
+	
+	version=First@StringSplit@Part[list,getStartPosition[list,"$MeshFormat"]+1];
+	If[
+		Not@MemberQ[{"2.2"},version],
+		Message[ImportMesh::gmshfrmt,version];Return[$Failed]
+	];
 	
 	nodes=getNodes[list];
 	If[ret==="MeshNodes", Return[nodes]];
