@@ -1,6 +1,10 @@
 (* ::Package:: *)
 
 (* ::Section::Closed:: *)
+(*Begin package*)
+
+
+(* ::Subsection::Closed:: *)
 (*Header comments*)
 
 
@@ -13,7 +17,7 @@
 (* :Acknowledgements: Thank you: b3m2a1 *)
 
 
-(* ::Section::Closed:: *)
+(* ::Subsection::Closed:: *)
 (*Begin package*)
 
 
@@ -41,7 +45,7 @@ ImportMesh::fail="Failed to extract mesh from ``";
 ImportMesh::gmshfrmt="GMSH file format version `1` is not supported.";
 
 
-(* ::Section::Closed:: *)
+(* ::Subsection::Closed:: *)
 (*Package Level Functions*)
 
 
@@ -50,12 +54,14 @@ ImportMesh::gmshfrmt="GMSH file format version `1` is not supported.";
  for those who are interested in doing more development work. *)
 
 BeginPackage["`Package`"];
+
 importAbaqusMesh::usage="";
 importComsolMesh::usage="";
 importGmshMesh::usage="";
 importElfenMesh::usage="";
 convertToElementMesh::usage="";
 $importMeshFormats::usage="";
+
 EndPackage[];
 
 
@@ -630,22 +636,20 @@ getElements[list_]:=Module[
 (*Main function*)
 
 
-Options[importGmshMesh]=
-	Options[ImportMesh];
-$importMeshFormats["msh", "Elements"]=
-	{
-		"MeshElements",
-		"MeshNodes",
-		"MeshMarkers"
-		};
+$importMeshFormats["msh", "Elements"]={"MeshElements", "MeshNodes", "MeshMarkers"};
+
+importGmshMesh//Options=Options[ImportMesh];		
+
 importGmshMesh[list_List, opts:OptionsPattern[]]:=Module[
-	{version,nodes,markers,allElements, ret=OptionValue["ReturnElement"]},
+	{version,nodes,markers,allElements,ret},
 	
 	version=First@StringSplit@Part[list,getStartPosition[list,"$MeshFormat"]+1];
 	If[
 		Not@MemberQ[{"2.2"},version],
 		Message[ImportMesh::gmshfrmt,version];Return[$Failed]
 	];
+	
+	ret=OptionValue["ReturnElement"];
 	
 	nodes=getNodes[list];
 	If[ret==="MeshNodes", Return[nodes]];
@@ -658,10 +662,9 @@ importGmshMesh[list_List, opts:OptionsPattern[]]:=Module[
 ]
 
 
-importGmshMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
-	importGmshMesh[ReadList[file,String], opts];
-importGmshMesh[str_String, opts:OptionsPattern[]]:=
-	importGmshMesh[StringToStream[str], opts];
+importGmshMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:= importGmshMesh[ReadList[file,String], opts]
+
+importGmshMesh[str_String, opts:OptionsPattern[]]:= importGmshMesh[StringToStream[str], opts]
 
 
 End[]; (* "`Gmsh`" *)
