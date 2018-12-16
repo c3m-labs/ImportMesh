@@ -1,9 +1,10 @@
 (* ::Package:: *)
 
 (* Paclet Info File *)
+(* BuildNumber and Internal values should be inserted during build procedure. *)
 Paclet[
 	Name -> "ImportMesh",
-	Version -> "0.3.1",
+	Version -> "0.3.2",
 	WolframVersion -> "11.+",
     Description -> "Utilities for importing FEM meshes from other software.",
     Creator -> "Matevz Pintar",
@@ -14,6 +15,7 @@ Paclet[
 			Root -> ".",
 			Context ->{"ImportMesh`"}
 		},
+		(* Metadata for PacletServer (https://paclets.github.io/PacletServer) *)
 		{"PacletServer",
 			"Tags" -> {"finite-elements","mesh","FEM","import"},
 			"Categories" -> {"FEM"},

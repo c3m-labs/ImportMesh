@@ -8,12 +8,33 @@ Utilities for importing FEM meshes to Mathematica. Currently supported file form
 
 ## Installation
 
-Download `ImportMesh_x.y.z.zip` file from [the releases page](https://github.com/c3m-labs/ImportMesh/releases). 
-Then use Mathematica menu item `File -> Install...`, choose "Application" as type of item to install and as 
-source show the path to the ZIP file of application. Installing for logged-in user only is suggested. 
-Effectively the same procedure is to extract the ZIP file to the folder that you get by evaluating
-`SystemOpen@FileNameJoin[{$UserBaseDirectory, "Applications"}]` in Mathematica. 
-Then load the package by evaluating ``Get["ImportMesh`"]``.
+The following description is for people who just want to use the package functionality and 
+are not interested in package development. 
+To use _ImportMesh_ package you need Mathematica version 11. or later.
+
+_ImportMesh_ package is released in the `.paclet` file format, which contains code, 
+documentation and other necesseary resources. 
+Download the latest `.paclet` file from the [repository "releases" page](https://github.com/c3m-labs/ImportMesh/releases) 
+to your computer and install it by evaluating the following command in the Mathematica:
+
+```mathematica
+(* This is ussualy loaded automatically at kernel startup. *)
+Needs["PacletManager`"] 
+
+(* Download .paclet file from repository "releases" page. *)
+PacletInstall["full/path/to/ImportMesh-X.Y.Z.paclet"] 
+```
+
+This will permanently install the _ImportMesh_ package to `$UserBasePacletsDirectory`. 
+To update the documentation it may be necessary to restart Mathematica. 
+Mathematica will always use the latest installed version of package and all installed versions 
+can be enumerated by evaluating `PacletFind["ImportMesh"]`.
+You can get more detailed information about the package with `PacletInformation["ImportMesh"]`.
+All versions can be uninstalled with:
+
+```mathematica
+PacletUninstall["ImportMesh"]
+```
 
 Alternately load the package directly from online repository by running `Get["https://raw.githubusercontent.com/c3m-labs/ImportMesh/master/ImportMesh.wl"]`.
 
@@ -23,8 +44,12 @@ Alternately load the package directly from online repository by running `Get["ht
 
 The only (currently) public function is  `ImportMesh`. It creates `ElementMesh` object from a text file:
 
-    mesh=ImportMesh["path/to/your_mesh_file"];
-    mesh["Wireframe"]
+```mathematica
+Get["ImportMesh`"]
+
+mesh=ImportMesh["path/to/your_mesh_file"];
+mesh["Wireframe"]
+```
 
 ![screenshot](https://imgur.com/aq92uqA.gif "Geometry source: https://grabcad.com/library/goose-2")
 
