@@ -20,18 +20,34 @@ By default we assume script is started from git root directory. *)
 PacletDirectoryAdd@Directory[];
 Get["ImportMesh`"];
 
+Print["  Using Mathematica: ",$VersionNumber];
+
 Module[
-	{tr,time},
-	tr=TestReport[FileNameJoin[{Directory[],"Tests","Tests.wl"}]];
-	time=QuantityMagnitude@tr["TimeElapsed"];
+	{report,time,results,failIdx},
+	
+	report=TestReport[
+		FileNameJoin[{Directory[],"Tests","Tests.wl"}]
+	];
+	time=Round[
+		QuantityMagnitude@report["TimeElapsed"],
+		0.001
+	];
+	results=report["TestResults"];
+	failIdx=report["TestsFailedIndices"];
+	
+	Print["\n","  ",Length[results]," tests run in ",time," seconds."];
 	
 	If[
-		TrueQ@tr["AllTestsSucceeded"]
+		TrueQ@report["AllTestsSucceeded"]
 		,
-		Print["\n","  All tests passed in ",ToString@time," seconds."];
+		Print["  All tests succeeded!"];
 		Quit[0] (* exit code if all test pass *)
 		,
-		Print["\n","  Tests failed! IDs: ",tr["TestsFailedIndices"]];
+		Print["  ",Length[failIdx]," tests failed!"];
+		Do[
+			Print["  ",i," / ",results[i]["Outcome"]," / ",results[i]["TestID"]],
+			{i,failIdx}
+		];
 		Quit[1] (* exit code if any test fails *)
 	]
 ]
