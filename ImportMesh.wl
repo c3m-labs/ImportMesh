@@ -168,12 +168,53 @@ ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
 (* ::Subsection::Closed:: *)
 (*Common functions*)
 
+updateIncidents[{}, map_] := {} 
+
+updateIncidents[eleIn_, map_] := Module[
+{ele = eleIn, eleInci, eleMarker, eleType},
+  If[AssociationQ[map],
+   (* the /. map is inefficient since it unpacks *)
+   
+   eleInci = Developer`ToPackedArray /@ (ElementIncidents[ele] /. map);
+   eleMarker = ElementMarkers[ele];
+   eleType = Head /@ ele;
+   ele = MapThread[#1[#2, #3] &, {eleType, eleInci, eleMarker}];
+   eleInci = Null;
+   eleMarker = Null;
+   eleType = Null;
+   ];
+  ele
+  ]
+
+makeUniqueAndCompleteMeshElementIncidents[nodesIn_, eleIn_] := 
+ Module[
+  {nodes, ele, map,
+   eleInci, givenUniqueInciIDs, neededUniqueInciIDs
+   },
+  nodes = nodesIn;
+  ele = eleIn;
+  map = {};
+  
+  eleInci = ElementIncidents[ele];
+  givenUniqueInciIDs = Union[Join @@ (Flatten /@ eleInci)];
+  neededUniqueInciIDs = Range[Length[givenUniqueInciIDs]];
+  If[givenUniqueInciIDs =!= neededUniqueInciIDs,
+   map = AssociationThread[
+     Rule[givenUniqueInciIDs, neededUniqueInciIDs]];
+   ele = updateIncidents[ele, map];
+   nodes = nodes[[givenUniqueInciIDs]];
+   ];
+  {nodes, ele, map}
+  ]
+
 
 (* This function is common for all file formats. It accepts nodes and  the list with all elements 
 specified in a file and creates ElementMesh. *)
-convertToElementMesh[nodes_,allElements_]:=Module[
-	{sDim,point,line,surface,solid,head,meshElementsOpt},
+convertToElementMesh[nodesIn_,allElements_]:=Module[
+	{sDim,point,line,surface,solid,meshElements,nodes},
 	
+	nodes=nodesIn;
+
 	(* Spatial dimensions of the problem. *)
 	sDim=Last@Dimensions[nodes];
 	
@@ -187,24 +228,31 @@ convertToElementMesh[nodes_,allElements_]:=Module[
 	If[
 		TrueQ[(sDim==3&&solid=={})||(sDim==2&&surface=={})]
 		,
-		head=ToBoundaryMesh;
-		meshElementsOpt={}
+		meshElements=Automatic
 		,
-		head=ToElementMesh;
-		meshElementsOpt={"MeshElements"->Switch[sDim,1,line,2,surface,3,solid]}
+		meshElements=Switch[sDim,1,line,2,surface,3,solid]
 	];
+
+	boundaryElements = Switch[sDim,1,point,2,line,3,surface];
+
+	(* make sure element incidents are unique and complete *)
+	If[ meshElements =!= Automatic,
+		{nodes, meshElements, map} =
+			 makeUniqueAndCompleteMeshElementIncidents[nodes, meshElements];
+		boundaryElements = updateIncidents[boundaryElements, map];
+		point = updateIncidents[point, map];
+
+	];
+
 	(* "Coordinates" and "MeshElements" are the only required fields. 
-	Order of rules given seems important. Also use of Sequence is a little hack, because Nothing didn't work.
-	Possible bug?  *)	
-	head[
+	Order of rules given is important: first nodes and elements, then options  *)	
+	ToElementMesh[
 		"Coordinates"->nodes,
-		Sequence@@meshElementsOpt,
-		"BoundaryElements"->Switch[sDim,1,point,2,line,3,surface],
+		"MeshElements"->meshElements,
+		"BoundaryElements"->boundaryElements,
 		"PointElements"->point,
-		"CheckIncidentsCompletness"->False,
-		"CheckIntersections"->False,
-		"DeleteDuplicateCoordinates"->False
-	]//Quiet
+		"CheckIntersections"->False
+	]
 ]
 
 
