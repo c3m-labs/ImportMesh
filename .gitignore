@@ -1,5 +1,8 @@
 # MacOS files
 .DS_Store
 */.DS_Store
+#vim swap files
+*.swp
+*.swo
 
 build
