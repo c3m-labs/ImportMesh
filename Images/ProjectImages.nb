@@ -1,0 +1,134 @@
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Use", " ", "development", " ", 
+    RowBox[{"version", "."}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"PacletDirectoryAdd", "@", 
+   RowBox[{"ParentDirectory", "[", 
+    RowBox[{"NotebookDirectory", "[", "]"}], "]"}]}]}]], "Input",
+ CellLabel->"In[39]:=",ExpressionUUID->"98a181c1-8163-4c70-bacc-491151bba889"],
+
+Cell[BoxData[
+ RowBox[{"Get", "[", "\"\<ImportMesh`\>\"", "]"}]], "Input",
+ CellLabel->"In[40]:=",ExpressionUUID->"4ae1c006-c270-4eb3-a2e1-221f467b368d"],
+
+Cell[CellGroupData[{
+
+Cell["Examples for README", \
+"Subsection",ExpressionUUID->"5e6f7ba2-d840-4c47-b2d7-ad0017ea45d5"],
+
+Cell[CellGroupData[{
+
+Cell["Example 1", \
+"Subsubsection",ExpressionUUID->"7876bf11-4683-44bd-a88b-01459ea471a6"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+  "$repoURL", "=", 
+   "\"\<https://raw.githubusercontent.com/c3m-labs/ImportMesh/master\>\""}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"file", "=", 
+  RowBox[{"URLDownload", "@", 
+   RowBox[{"(", 
+    RowBox[{"$repoURL", "<>", "\"\</Tests/Gmsh/Hex8_box.msh\>\""}], 
+    ")"}]}]}]}], "Input",
+ CellLabel->"In[41]:=",ExpressionUUID->"dd54356e-e791-4246-8a59-9f7ef307bc52"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"mesh", "=", 
+   RowBox[{"Import", "[", 
+    RowBox[{"file", ",", "\"\<ElementMesh\>\""}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"pic", "=", 
+  RowBox[{"mesh", "[", 
+   RowBox[{"\"\<Wireframe\>\"", "[", 
+    RowBox[{
+     RowBox[{"\"\<MeshElementStyle\>\"", "\[Rule]", 
+      RowBox[{"FaceForm", "@", "LightBlue"}]}], ",", 
+     RowBox[{"ImageSize", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"600", ",", "200"}], "}"}]}]}], "]"}], "]"}]}]}], "Input",
+ CellLabel->"In[43]:=",ExpressionUUID->"40a2695b-63b2-47b0-93db-294470cdb724"],
+
+Cell[BoxData[
+ RowBox[{"Export", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"FileNameJoin", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"NotebookDirectory", "[", "]"}], ",", "\"\<Example1.png\>\""}], 
+     "}"}], "]"}], ",", "\[IndentingNewLine]", "pic"}], "\[IndentingNewLine]",
+   "]"}]], "Input",
+ CellLabel->"In[45]:=",ExpressionUUID->"429474c0-1d91-468f-bbbc-b5d82a771ce6"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Example 2", \
+"Subsubsection",ExpressionUUID->"58767b91-a7e3-40a3-8c41-979463a2a5fa"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"inputText", "=", 
+   RowBox[{"ReadString", "@", 
+    RowBox[{"(", 
+     RowBox[{"$repoURL", "<>", "\"\</Tests/Abaqus/Quad4_annulus.inp\>\""}], 
+     ")"}]}]}], ";"}]], "Input",
+ CellLabel->"In[46]:=",ExpressionUUID->"7a6c9fc4-cc22-4c5b-9607-806a2970f2a0"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"mesh", "=", 
+   RowBox[{"ImportString", "[", 
+    RowBox[{"inputText", ",", "\"\<AbaqusMesh\>\""}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"pic", "=", 
+  RowBox[{"mesh", "[", 
+   RowBox[{"\"\<Wireframe\>\"", "[", 
+    RowBox[{
+     RowBox[{"\"\<MeshElementStyle\>\"", "\[Rule]", 
+      RowBox[{"FaceForm", "@", "LightBlue"}]}], ",", 
+     RowBox[{"ImageSize", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"600", ",", "200"}], "}"}]}]}], "]"}], "]"}]}]}], "Input",
+ CellLabel->"In[47]:=",ExpressionUUID->"aff3a765-208c-41a1-92c0-31890d1fb3cc"],
+
+Cell[BoxData[
+ RowBox[{"Export", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"FileNameJoin", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"NotebookDirectory", "[", "]"}], ",", "\"\<Example2.png\>\""}], 
+     "}"}], "]"}], ",", "\[IndentingNewLine]", "pic"}], "\[IndentingNewLine]",
+   "]"}]], "Input",
+ CellLabel->"In[49]:=",ExpressionUUID->"541bad0d-678d-45ae-83a8-c19c16bccbde"],
+
+Cell[BoxData[
+ RowBox[{"ImportString", "[", 
+  RowBox[{"inputText", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<AbaqusMesh\>\"", ",", "\"\<Elements\>\""}], "}"}]}], 
+  "]"}]], "Input",
+ CellLabel->"In[50]:=",ExpressionUUID->"1c05be40-31f8-4407-ae3c-1385c0ae97fb"],
+
+Cell[BoxData[
+ RowBox[{"ImportString", "[", 
+  RowBox[{"inputText", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<AbaqusMesh\>\"", ",", "\"\<MeshNodes\>\""}], "}"}]}], 
+  "]"}]], "Input",
+ CellLabel->"In[51]:=",ExpressionUUID->"51aa3b03-18c2-44ba-843a-d5e564f35b1b"]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{958, 1086},
+WindowMargins->{{Automatic, -8}, {Automatic, 0}},
+PrivateNotebookOptions->{"FileOutlineCache"->False},
+FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
+StyleDefinitions->"Default.nb"
+]
+

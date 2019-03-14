@@ -9,34 +9,34 @@ Utilities for importing FEM meshes to Mathematica. Currently supported file form
 
 ## Installation
 
-The following description is for people who just want to use the package
-functionality and are not interested in package development.
+The following description is for people who just want to use the package functionality and
+are not interested in package development.
 
 To use _ImportMesh_ package you need Mathematica version 11. or later.
 
 _ImportMesh_ package is released in the `.paclet` file format, which contains code,
 documentation and other necessary resources.
-Download the latest `.paclet` file from the [repository "releases" page](https://github.com/c3m-labs/ImportMesh/releases)
+Download the latest `.paclet` file from the repository ["releases"](https://github.com/c3m-labs/ImportMesh/releases) page
 to your computer and install it by evaluating the following command in the Mathematica:
 
-```mathematica
-(* This is usually loaded automatically at kernel startup. *)
+````mathematica
+(* This built-in package is usually loaded automatically at kernel startup. *)
 Needs["PacletManager`"]
 
-(* Download .paclet file from repository "releases" page. *)
+(* Path to .paclet file downloaded from repository "releases" page. *)
 PacletInstall["full/path/to/ImportMesh-X.Y.Z.paclet"]
-```
+````
 
 This will permanently install the _ImportMesh_ package to `$UserBasePacletsDirectory`.
-To update the documentation it may be necessary to restart Mathematica. 
+To update the documentation it may be necessary to restart Mathematica.
 Mathematica will always use the latest installed version of package and all installed versions
 can be enumerated by evaluating `PacletFind["ImportMesh"]`.
 You can get more detailed information about the package with `PacletInformation["ImportMesh"]`.
 All versions can be uninstalled with:
 
-```mathematica
+````mathematica
 PacletUninstall["ImportMesh"]
-```
+````
 
 Alternately load the package directly from online repository by running
 `Get["https://raw.githubusercontent.com/c3m-labs/ImportMesh/master/ImportMesh.wl"]`.
@@ -47,12 +47,12 @@ Alternately load the package directly from online repository by running
 
 The only (currently) public function is  `ImportMesh`. It creates `ElementMesh` object from a text file:
 
-```mathematica
+````mathematica
 Get["ImportMesh`"]
 
 mesh=ImportMesh["path/to/your_mesh_file"];
 mesh["Wireframe"]
-```
+````
 
 ![screenshot](https://imgur.com/aq92uqA.gif "Geometry source: https://grabcad.com/library/goose-2")
 
@@ -62,69 +62,47 @@ There are also functions in the ``"`Package`"`` subcontext that implement `Impor
 Similarly, support is added for `Import` registration, so it is possible to import a file as an
 `"ElementMesh"` and get it to work as expected. For example:
 
-```mathematica
+````mathematica
+$repURL = "https://raw.githubusercontent.com/c3m-labs/ImportMesh/master";
+file = URLDownload@($repURL <> "/Tests/Gmsh/Hex8_box.msh");
 
-meshExample =
- URLDownload@"https://raw.githubusercontent.com/c3m-labs/ImportMesh/master/Tests/Gmsh/box_H1.msh";
-Import[meshExample, "ElementMesh"]["Wireframe"]
-```
+mesh = Import[file, "ElementMesh"];
+pic = mesh["Wireframe"["MeshElementStyle" -> FaceForm@LightBlue]]
+````
 
-![example](https://i.stack.imgur.com/IAazP.png "Import base")
+![example](Images/Example1.png "Import base")
 
 Support is also provided for import as a string if the format type of the file is known:
 
-```mathematica
+````mathematica
+inputText = ReadString@($repURL <> "/Tests/Abaqus/Quad4_annulus.inp");
+mesh = ImportString[inputText, "AbaqusMesh"];
+pic = mesh["Wireframe"["MeshElementStyle" -> FaceForm@LightBlue]]
+````
 
-inpText =
-  ReadString@"https://raw.githubusercontent.com/c3m-labs/ImportMesh/master/Tests/Abaqus/nle1xf4f.inp";
-ImportString[inpText, "AbaqusMesh"]["Wireframe"]
-```
-
-![example](https://i.stack.imgur.com/4cBAV.png "Import string")
-
-This also allows for loading of assets off the web:
-
-```mathematica
-
-Import[
-  "https://raw.githubusercontent.com/c3m-labs/ImportMesh/master/Tests/Elfen/disc_Q1.mes",
-  "ElfenMesh"
-  ]["Wireframe"]
-```
-
-![example](https://i.stack.imgur.com/EqN8o.png "Import web")
+![example](Images/Example2.png "Import string")
 
 Specific elements may also be extracted when the format is known:
 
-```mathematica
-
+````mathematica
 ImportString[inpText, {"AbaqusMesh", "Elements"}]
+(* {"Mesh", "MeshNodes", "MeshElements"} *)
+````
 
-{"Mesh", "MeshNodes", "MeshElements"}
-```
-
-```mathematica
-
+````mathematica
 ImportString[inpText, {"AbaqusMesh", "MeshNodes"}]
+(* {{0.,1.}, {0., 1.4375}, ... } *)
+````
 
-{{0.,1.}, {0., 1.4375}, {0., 1.875}, {0., 2.3125}, {0.,2.75}, {0.659994, 0.932966}, {0.742355, 1.34813},
- {0.824716, 1.7633}, {0.907077, 2.17846}, {0.989438, 2.59363}, {1.165,  0.81283}, {1.3195, 1.18442},
- {1.474, 1.55602}, {1.6285, 1.92761}, {1.783, 2.2992}, {1.53326, 0.649529}, {1.74826, 0.957066},
- {1.96326, 1.2646}, {2.17826, 1.57214}, {2.39326, 1.87968}, {1.78302, 0.453}, {2.04547, 0.67675},
- {2.30791, 0.9005}, {2.57036, 1.12425}, {2.8328, 1.348}, {1.93252, 0.233178}, {2.22794, 0.354165}, 
- {2.52335, 0.475152}, {2.81877, 0.596139}, {3.11419, 0.717125}, {2., 0.}, {2.3125, 0.}, {2.625, 0.},
- {2.9375, 0.}, {3.25, 0.}
-}
+More information on how to manipulate and visualize `ElementMesh` objects is available in official
+[documentation](https://reference.wolfram.com/language/FEMDocumentation/tutorial/ElementMeshVisualization.html)
 
-  ```
+## Contributing and bug reports
 
-More information on how to manipulate and visualize `ElementMesh` objects is available in official [documentation](https://reference.wolfram.com/language/FEMDocumentation/tutorial/ElementMeshVisualization.html)
-
-## Contributions
+You can open a new [issue](https://github.com/c3m-labs/ImportMesh/issues/new) with bug report or feature request.
 
 Contributions to ImportMesh package are very welcome.
-You can open a [new issue](https://github.com/c3m-labs/ImportMesh/issues/new) with bug report or feature request.
-
+Guidelines on how to build paclet file from source code can be found in [CONTRIBUTING.md]( CONTRIBUTING.md ) file.
 These are some things you can help with:
 
 - Test package with different mesh files
