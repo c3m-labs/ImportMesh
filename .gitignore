@@ -1,8 +1,13 @@
 # MacOS files
 .DS_Store
 */.DS_Store
+
 #vim swap files
 *.swp
 *.swo
+
+# IntelliJ IDEA editor files
+.idea
+*.iml
 
 build

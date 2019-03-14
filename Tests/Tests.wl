@@ -4,10 +4,6 @@
 (*Description*)
 
 
-(* ::Text:: *)
-(*These are unit test for "ImportMesh" paclet. *)
-
-
 (* "ImportMesh`" package must be loaded before running these tests, otherwise testing is aborted. *)
 If[
 	Not@MemberQ[$Packages,"ImportMesh`"],
@@ -17,7 +13,7 @@ If[
 
 (* Tests should be always run from development environment - there they make sense. *)
 With[{
-	dir=FileNameJoin[{"Location"/.PacletInformation["ImportMesh"],"Tests"}]
+	dir=FileNameJoin[{ParentDirectory["Location"/.PacletInformation["ImportMesh"]],"Tests"}]
 	},
 	If[
 		DirectoryQ[dir],
@@ -27,8 +23,7 @@ With[{
 ];
 
 
-(* Currently it is unclear what this line does, it is automatically generated during conversion to .wlt *)
-BeginTestSection["Tests"]
+BeginTestSection["Tests"];
 
 
 (* ::Subsection::Closed:: *)
