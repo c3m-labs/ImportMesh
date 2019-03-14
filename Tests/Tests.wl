@@ -39,7 +39,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Abaqus_Tet4"
-]
+];
 
 
 VerificationTest[
@@ -47,7 +47,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Abaqus_Hex8"
-]
+];
 
 
 (* ::Subsubsection::Closed:: *)
@@ -64,7 +64,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Abaqus_Tri3-2D"
-]
+];
 
 
 (* NAFEMS LE1 test *)
@@ -73,7 +73,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Abaqus_Quad4-2D"
-]
+];
 
 
 (* NAFEMS LE3 test *)
@@ -82,7 +82,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Abaqus_Tri3-3D"
-]
+];
 
 
 (* NAFEMS LE3 test *)
@@ -91,7 +91,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Abaqus_Quad4-3D"
-]
+];
 
 
 (* ::Subsubsection::Closed:: *)
@@ -105,7 +105,7 @@ VerificationTest[
 	],	
 	{"Mesh","MeshNodes","MeshElements"},
 	TestID->"Abaqus_System`Import-Elements"
-]
+];
 
 
 VerificationTest[
@@ -119,7 +119,7 @@ VerificationTest[
 		{LineElement[{{2,1},{1,4},{4,7},{10,11},{7,10},{3,2},{6,3},{9,6},{12,9},{11,12}}]}
 	],
 	TestID->"Abaqus_System`Import-Mesh"
-]
+];
 
 
 (* ::Subsubsection::Closed:: *)
@@ -132,7 +132,7 @@ VerificationTest[
 	$Failed,
 	{ImportMesh::eltype,ImportMesh::fail},
 	TestID->"Abaqus_unsupported-element-type"
-]
+];
 
 
 (* Abaqus functionality to generate nodes and elements on-the-fly is not supported. *)
@@ -141,7 +141,7 @@ VerificationTest[
 	$Failed,
 	{ImportMesh::abaqus,ImportMesh::fail},
 	TestID->"Abaqus_ELGEN-keyword-fail"
-]
+];
 
 
 (* ::Subsection::Closed:: *)
@@ -153,7 +153,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Tri3"
-]
+];
 
 
 VerificationTest[
@@ -161,7 +161,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Tri6"
-]
+];
 
 
 VerificationTest[
@@ -169,7 +169,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Quad4-2D"
-]
+];
 
 
 VerificationTest[
@@ -177,7 +177,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Quad4-3D"
-]
+];
 
 
 VerificationTest[
@@ -185,7 +185,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Quad8"
-]
+];
 
 
 VerificationTest[
@@ -193,7 +193,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Tet4-1"
-]
+];
 
 
 VerificationTest[
@@ -201,7 +201,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Tet4-2"
-]
+];
 
 
 VerificationTest[
@@ -209,7 +209,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Tet10"
-]
+];
 
 
 VerificationTest[
@@ -217,7 +217,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Comsol_Hex20"
-]
+];
 
 
 (* ::Subsection::Closed:: *)
@@ -229,7 +229,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Elfen_Quad4"
-]
+];
 
 
 VerificationTest[
@@ -237,7 +237,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Elfen_Quad8"
-]
+];
 
 
 VerificationTest[
@@ -245,7 +245,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Elfen_Tet4"
-]
+];
 
 
 VerificationTest[
@@ -253,7 +253,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Elfen_Tet10"
-]
+];
 
 
 VerificationTest[
@@ -261,7 +261,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Elfen_Hex8"
-]
+];
 
 
 VerificationTest[
@@ -269,7 +269,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Elfen_Hex20"
-]
+];
 
 
 (* ::Subsection::Closed:: *)
@@ -285,7 +285,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Gmsh_Tri3"
-]
+];
 
 
 VerificationTest[
@@ -293,7 +293,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Gmsh_Tri6"
-]
+];
 
 
 VerificationTest[
@@ -301,7 +301,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Gmsh_Quad4"
-]
+];
 
 
 VerificationTest[
@@ -309,7 +309,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Gmsh_Quad8"
-]
+];
 
 
 (* ::Subsubsection::Closed:: *)
@@ -321,7 +321,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Gmsh_Tet4"
-]
+];
 
 
 VerificationTest[
@@ -329,7 +329,7 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Gmsh_Tet10"
-]
+];
 
 
 VerificationTest[
@@ -337,11 +337,11 @@ VerificationTest[
 	_ElementMesh,
 	SameTest->MatchQ,
 	TestID->"Gmsh_Hex8"
-]
+];
 
 
 (* ::Subsection::Closed:: *)
 (*EndTestSection*)
 
 
-EndTestSection[]
+EndTestSection[];

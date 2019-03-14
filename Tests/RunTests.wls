@@ -4,7 +4,7 @@
 $helpMessage=("  Usage: RunTests.wls [options]
 
   Options:
-    -h, --help                   Output usage information")
+    -h, --help                   Output usage information");
 
 
 If[
@@ -50,4 +50,4 @@ Module[
 		];
 		Quit[1] (* exit code if any test fails *)
 	]
-]
+];

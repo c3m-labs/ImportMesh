@@ -1,42 +1,45 @@
 (* ::Package:: *)
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Begin package*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Header comments*)
 
 
 (* :Title: ImportMesh *)
 (* :Context: ImportMesh` *)
-(* :Author: Pintar M, C3M, Slovenia *)
+(* :Author: Matevz Pintar *)
 (* :Summary: Utilities for importing FEM meshes from other software. *)
-(* :Copyright: C3M d.o.o., 2018 *)
+(* :Copyright: C3M d.o.o., 2019 *)
 
-(* :Acknowledgements: Thank you: b3m2a1 *)
+(* :Acknowledgements: b3m2a1, Oliver Ruebenkoenig *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Begin package*)
 
 
-If[$VersionNumber<11,Print["Package requires Mathematica 11 or higher."];Abort[]];
+If[
+	$VersionNumber<11,
+	Print["Package requires Mathematica 11 or higher."];Abort[]
+];
 
 
 (* Mathematica FEM functionality (context "NDSolve`FEM`") is needed. *)
 BeginPackage["ImportMesh`",{"NDSolve`FEM`"}];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Messages*)
 
 
-ImportMesh::usage="ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.
-ImportMesh[\"string\", fmt] imports \"string\" in the specified format.
-ImportMesh[stream, fmt] imports the InputStream stream in the specified format.";
-
-
+ImportMesh::usage=(
+	"ImportMesh[\"file\"] imports data from mesh file, returning a ElementMesh object.\n"<>
+	"ImportMesh[\"string\", fmt] imports \"string\" in the specified format.\n"<>
+	"ImportMesh[stream, fmt] imports the InputStream stream in the specified format."
+);
 (* All error/warning messages are currently attached to the only public symbol. *)
 ImportMesh::nosup="Mesh file format \".`1`\" is currently not supported.";
 ImportMesh::eltype="Element type `1` is not supported.";
@@ -45,7 +48,7 @@ ImportMesh::fail="Failed to extract mesh from ``";
 ImportMesh::gmshfrmt="GMSH file format version `1` is not supported.";
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Package Level Functions*)
 
 
@@ -65,7 +68,7 @@ $importMeshFormats::usage="";
 EndPackage[];
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Code*)
 
 
@@ -81,13 +84,11 @@ to be called by their full name.
 *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*The main public function*)
 
 
-(* This is declared first so that all package-level functions can inherit from it *)
-
-
+(* This is declared first so that all package-level functions can inherit from it. *)
 $importMeshFormats=
 	<|
 		"inp"->
@@ -132,18 +133,17 @@ $importMeshFormats=
 (* In the case that importing mesh file is not successful the function ImportMesh should return $Failed, 
 just like the system function Import. *)
 
-Clear[ImportMesh]
-Options[ImportMesh]=
-	{
-		"ScaleSize"->1,
-		"SpatialDimension"->Automatic,
-		"ReturnElement"->"Mesh"
-		};
+ImportMesh//Options={
+	"ScaleSize"->1,
+	"SpatialDimension"->Automatic,
+	"ReturnElement"->"Mesh"
+};
+
 ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
 	FileExistsQ[file]||Message[ImportMesh::noopen,file]
 	):=
 		Module[
-			{scale, ext, fn, res},
+			{ext, fn, res},
 			(*PrintTemporary["Converting mesh..."];*)
 			ext=ToLowerCase[FileExtension[file]];
 			fn=
@@ -165,10 +165,11 @@ ImportMesh[file:_String|_File, opts:OptionsPattern[]]/;(
 		];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Common functions*)
 
-updateIncidents[{}, map_] := {} 
+
+updateIncidents[{}, map_] := {};
 
 updateIncidents[eleIn_, map_] := Module[
 {ele = eleIn, eleInci, eleMarker, eleType},
@@ -184,7 +185,8 @@ updateIncidents[eleIn_, map_] := Module[
    eleType = Null;
    ];
   ele
-  ]
+];
+
 
 makeUniqueAndCompleteMeshElementIncidents[nodesIn_, eleIn_] := 
  Module[
@@ -205,13 +207,13 @@ makeUniqueAndCompleteMeshElementIncidents[nodesIn_, eleIn_] :=
    nodes = nodes[[givenUniqueInciIDs]];
    ];
   {nodes, ele, map}
-  ]
+  ];
 
 
 (* This function is common for all file formats. It accepts nodes and  the list with all elements 
 specified in a file and creates ElementMesh. *)
 convertToElementMesh[nodesIn_,allElements_]:=Module[
-	{sDim,point,line,surface,solid,meshElements,nodes},
+	{sDim,point,line,surface,solid,meshElements,boundaryElements,nodes,map},
 	
 	nodes=nodesIn;
 
@@ -253,10 +255,10 @@ convertToElementMesh[nodesIn_,allElements_]:=Module[
 		"PointElements"->point,
 		"CheckIntersections"->False
 	]
-]
+];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Abaqus (.inp)*)
 
 
@@ -271,7 +273,7 @@ new line in a text file and this has to be somehow taken into account.
 *)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Process elements*)
 
 
@@ -279,12 +281,12 @@ new line in a text file and this has to be somehow taken into account.
 $spatialDimension=3;
 
 
-(* This "type" argumet it the next few functions is used only to issue a message with full element type string. *)
+(* This "type" argument it the next few functions is used only to issue a message with full element type string. *)
 processLine[type_,string_]:=Which[
 	StringStartsQ[string,"1"],{LineElement,2},
 	StringStartsQ[string,"2"],{LineElement,3},
 	True,Message[ImportMesh::eltype,type];Throw[$Failed]
-]
+];
 
 
 processSurface[type_,string_]:=Which[
@@ -293,7 +295,7 @@ processSurface[type_,string_]:=Which[
 	StringStartsQ[string,"4"],{QuadElement,4},
 	StringStartsQ[string,"8"],{QuadElement,8},
 	True,Message[ImportMesh::eltype,type];Throw[$Failed]
-]
+];
 
 
 processVolume[type_,string_]:=Which[
@@ -302,7 +304,7 @@ processVolume[type_,string_]:=Which[
 	StringStartsQ[string,"8"],{HexahedronElement,8},
 	StringStartsQ[string,"20"],{HexahedronElement,20},
 	True,Message[ImportMesh::eltype,type];Throw[$Failed]
-]
+];
 
 
 processContinuumType[type_,inString_]:=Module[
@@ -318,7 +320,7 @@ processContinuumType[type_,inString_]:=Module[
 		,
 		True,Message[ImportMesh::eltype,type];Throw[$Failed]
 	]
-]
+];
 
 
 processElementType[type_String]:=Module[
@@ -330,7 +332,7 @@ processElementType[type_String]:=Module[
 	$spatialDimension=3;
 	
 	Which[
-		(* Continuum elemements can be 2D or 3D and we have to process this separately. *)
+		(* Continuum elements can be 2D or 3D and we have to process this separately. *)
 		StringStartsQ[string,keysCont],
 		string=StringTrim[string,keysCont];processContinuumType[type,string]
 		,
@@ -342,7 +344,7 @@ processElementType[type_String]:=Module[
 		,
 		True,Message[ImportMesh::eltype,type];Throw[$Failed]
 	]
-]
+];
 
 
 processElements[type_String,flattenedConnectivity_,marker_Integer]:=Block[
@@ -354,20 +356,20 @@ processElements[type_String,flattenedConnectivity_,marker_Integer]:=Block[
 		connectivity/.$nodeNumbering,
 		ConstantArray[marker,Length[connectivity]]
 	]
-]
+];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Helper functions*)
 
 
 (* Helper function to get position of keyword in a list of lists. It assumes Abaqus keywords (e.g. *NODE)
-are always at the begining of line. *)
-getPosition[list_List,key_]:=Position[list,key][[All,1]]
+are always at the beginning of line. *)
+getPosition[list_List,key_]:=Position[list,key][[All,1]];
 
 
 (* Collect lines until another symbol "*" appears. *)
-takeLines[list_,start_Integer]:=TakeWhile[Drop[list,start],(StringPart[First@#,1]=!="*")&]
+takeLines[list_,start_Integer]:=TakeWhile[Drop[list,start],(StringPart[First@#,1]=!="*")&];
 
 
 (* Collect all node specifications (can be scattered around file) and return their numbering and coordinates (X,Y,Z). *)
@@ -382,24 +384,24 @@ getNodes[list_]:=Module[
 		{2}
 	];
 	{numbering,crds}
-]
+];
 
 
-getElementType[list_,pos_Integer]:=StringDelete[list[[pos,2]],"TYPE="]
+getElementType[list_,pos_Integer]:=StringDelete[list[[pos,2]],"TYPE="];
 
 
 getElementSet[list_,pos_Integer]:=If[
 	Length[list[[pos]]]>2,
 	StringDelete[list[[pos,3]],"ELSET="],
 	Missing[]
-]
+];
 
 
-getElementConnectivity[list_,pos_]:=ToExpression[Join@@takeLines[list,pos]]
+getElementConnectivity[list_,pos_]:=ToExpression[Join@@takeLines[list,pos]];
 
 
 getElements[list_]:=Module[
-	{startLines,elSetStrings,types,supportedTypes,flattenedConnectivity,markers},
+	{startLines,elSetStrings,types,flattenedConnectivity,markers},
 	startLines=getPosition[list,"*ELEMENT"];
 	
 	elSetStrings=getElementSet[list,#]&/@startLines;
@@ -407,28 +409,29 @@ getElements[list_]:=Module[
 	flattenedConnectivity=getElementConnectivity[list,#]&/@startLines;
 	
 	(* Values of variable ELSET is are sorted and assigned consecutive integer. If ELSET is not set, then
-	elements get metker value 0. This is save in global symbol $markerNumbering for further use. 
+	elements get marker value 0. This is save in global symbol $markerNumbering for further use.
 	This is a hack, and could be solved more elegantly. *)
 	$markerNumbering=MapIndexed[#1->First[#2]&,Union@DeleteMissing[elSetStrings]];
 	markers=elSetStrings/.Prepend[$markerNumbering,Missing[]->0];
 	
 	MapThread[ processElements[#1,#2,#3]&, {types,flattenedConnectivity,markers} ]
-]
+];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Main function*)
 
 
-Options[importAbaqusMesh]=
-	Options[ImportMesh];
+Options[importAbaqusMesh]=Options[ImportMesh];
+
 $importMeshFormats["inp", "Elements"]=
 	{
 		"MeshNodes",
 		"MeshElements"
 		};
+
 importAbaqusMesh[list_List, ops:OptionsPattern[]]:=Module[
-	{nodes,numbering,allElements,dim, scale, ret=OptionValue["ReturnElement"]},
+	{nodes,numbering,allElements,dim, ret=OptionValue["ReturnElement"]},
 	
 	(* Currently incremental node and element generation is not supported.*)
 	If[getPosition[list,"*NGEN"|"*ELGEN"]=!={},Message[ImportMesh::abaqus];Throw[$Failed]];
@@ -440,7 +443,7 @@ importAbaqusMesh[list_List, ops:OptionsPattern[]]:=Module[
 	allElements=getElements[list];
 	If[ret==="MeshElements", Return[allElements]];
 	
-	(* Here we use the ugly hack. Value of global symbol $spatialDimension set at proccessing the element type 
+	(* Here we use the ugly hack. Value of global symbol $spatialDimension set at processing the element type
 		is used to determine if we have 2D or 3D space mesh. *)
 	dim=
 		Replace[OptionValue["SpatialDimension"], 
@@ -452,7 +455,7 @@ importAbaqusMesh[list_List, ops:OptionsPattern[]]:=Module[
 	If[ret==="MeshNodes", Return[nodes]];
 				
 	convertToElementMesh[nodes,allElements]
-]
+];
 
 
 importAbaqusMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
@@ -470,20 +473,20 @@ importAbaqusMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
 			{s_String/;StringStartsQ[s,"**"]}
 			],
 		opts
-		]
+		];
 
 
 importAbaqusMesh[str_String, opts:OptionsPattern[]]:=
 	importAbaqusMesh[
 		StringToStream[str],
 		opts
-		]
+		];
 
 
 End[]; (* "`Abaqus`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Comsol (.mphtxt)*)
 
 
@@ -491,14 +494,14 @@ End[]; (* "`Abaqus`" *)
 Begin["`Comsol`"];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Helper functions*)
 
 
 getNumber[list_List,key_]:=ToExpression@Flatten@StringCases[list,x__~~key:>x];
 
 
-getPosition[list_List,key_]:=ToExpression@Flatten@Position[list,key]
+getPosition[list_List,key_]:=ToExpression@Flatten@Position[list,key];
 
 
 getNodes[list_]:=Module[
@@ -514,10 +517,10 @@ getNodes[list_]:=Module[
 		StringSplit@listOfStrings,
 		{2}
 	]
-]
+];
 
 
-takeLines[list_List,start_Integer,noLines_Integer]:=ToExpression@StringSplit@Take[list,{start+1,start+noLines}]
+takeLines[list_List,start_Integer,noLines_Integer]:=ToExpression@StringSplit@Take[list,{start+1,start+noLines}];
 
 
 switchType={
@@ -528,12 +531,12 @@ switchType={
 };
 
 
-modification["quad",nodes_]:=nodes[[{1,2,4,3}]]
-modification["quad2",nodes_]:=nodes[[{1,2,4,3,5,8,9,6}]]
-modification["hex",nodes_]:=nodes[[{1,2,4,3,5,6,8,7}]]
-modification["hex2",nodes_]:=nodes[[{1,2,4,3,5,6,8,7,9,12,13,10,23,26,27,24,14,16,22,20}]]
-modification["tet2",nodes_]:=nodes[[{1,2,3,4,5,7,6,9,10,8}]]
-modification[type_,nodes_]:=nodes
+modification["quad",nodes_]:=nodes[[{1,2,4,3}]];
+modification["quad2",nodes_]:=nodes[[{1,2,4,3,5,8,9,6}]];
+modification["hex",nodes_]:=nodes[[{1,2,4,3,5,6,8,7}]];
+modification["hex2",nodes_]:=nodes[[{1,2,4,3,5,6,8,7,9,12,13,10,23,26,27,24,14,16,22,20}]];
+modification["tet2",nodes_]:=nodes[[{1,2,3,4,5,7,6,9,10,8}]];
+modification[type_,nodes_]:=nodes;
 
 
 getElements[list_,type_,length_,startElement_,startDomain_]:=With[
@@ -545,15 +548,15 @@ getElements[list_,type_,length_,startElement_,startDomain_]:=With[
 		Flatten@takeLines[list,startDomain,length]
 	]
 	}
-]
+];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Main function*)
 
 
-Options[importComsolMesh]=
-	Options[ImportMesh];
+Options[importComsolMesh]=Options[ImportMesh];
+
 $importMeshFormats["mphtxt", "Elements"]=
 	{
 		"MeshElements",
@@ -563,7 +566,7 @@ $importMeshFormats["mphtxt", "Elements"]=
 		"MeshMarkers"
 		};
 importComsolMesh[list:{__String}, opts:OptionsPattern[]]:=Module[
-	{sdim,nodes,types,lengths,startElements,startMarkers,
+	{nodes,types,lengths,startElements,startMarkers,
 		allElements,
 		ret=OptionValue["ReturnElement"]
 		},
@@ -588,7 +591,7 @@ importComsolMesh[list:{__String}, opts:OptionsPattern[]]:=Module[
 	If[ret==="MeshElements", Return[allElements]];
 	
 	convertToElementMesh[nodes,allElements]
-]
+];
 
 
 importComsolMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
@@ -600,7 +603,7 @@ importComsolMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Comsol`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Gmsh (.msh)*)
 
 
@@ -608,11 +611,11 @@ End[]; (* "`Comsol`" *)
 Begin["`Gmsh`"];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Helper functions*)
 
 
-getStartPosition[list_List,key_]:=ToExpression@First[Flatten@Position[list,key],$Failed]
+getStartPosition[list_List,key_]:=ToExpression@First[Flatten@Position[list,key],$Failed];
 
 
 getNumber[list_List,key_]:=ToExpression@Part[list,getStartPosition[list,key]+1];
@@ -627,7 +630,7 @@ getNodes[list_]:=Module[
 		Rest/@StringSplit@Take[list,{start+2,start+1+noNodes}],
 		{2}
 	]
-]
+];
 
 
 getMarkers[list_]:=Module[
@@ -639,7 +642,7 @@ getMarkers[list_]:=Module[
 	noEntites=ToExpression@Part[list,start];
 	(* {dimension, integer name, string name} *)
 	ToExpression@StringSplit@Take[list,{start+1,start+noEntites}]
-]
+];
 
 
 (* {Head, order, noNodes, reordering} *)
@@ -659,7 +662,6 @@ elementData={
 };
 
 
-Clear[restructure]
 restructure[list_]:=Block[
 	{head,order,noNodes,nodes,noMarkers,markers,reordering},
 	{head,order,noNodes,reordering}=list[[1,1]]/.elementData;
@@ -667,7 +669,7 @@ restructure[list_]:=Block[
 	nodes=Part[list,All,(3+noMarkers);;];
 	markers=Part[list,All,3];
 	head[nodes[[All,reordering]],markers]
-]
+];
 
 
 getElements[list_]:=Module[
@@ -677,10 +679,10 @@ getElements[list_]:=Module[
 	raw=Rest/@ToExpression@StringSplit@Take[list,{start+1,start+noEntites}];
 	
 	restructure/@(Values@GroupBy[raw,First])
-]
+];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Main function*)
 
 
@@ -707,18 +709,18 @@ importGmshMesh[list_List, opts:OptionsPattern[]]:=Module[
 	If[ret==="MeshElements", Return[allElements]];
 	
 	convertToElementMesh[nodes,allElements]
-]
+];
 
 
-importGmshMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:= importGmshMesh[ReadList[file,String], opts]
+importGmshMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:= importGmshMesh[ReadList[file,String], opts];
 
-importGmshMesh[str_String, opts:OptionsPattern[]]:= importGmshMesh[StringToStream[str], opts]
+importGmshMesh[str_String, opts:OptionsPattern[]]:= importGmshMesh[StringToStream[str], opts];
 
 
 End[]; (* "`Gmsh`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Elfen (.mes)*)
 
 
@@ -726,11 +728,11 @@ End[]; (* "`Gmsh`" *)
 Begin["`Elfen`"];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Helper functions*)
 
 
-getPosition[list_List,key_]:=ToExpression@Flatten@Position[list,key]
+getPosition[list_List,key_]:=ToExpression@Flatten@Position[list,key];
 
 
 getTypes[list_]:=Module[
@@ -739,7 +741,7 @@ getTypes[list_]:=Module[
 	n=ToExpression@list[[start+1]];
 	
 	ToExpression/@list[[start+2;;start+1+n]]
-]
+];
 
 
 getNodes[list_]:=Module[
@@ -753,7 +755,7 @@ getNodes[list_]:=Module[
 		Internal`StringToDouble/@list[[start+3;;start+3+(n*dim)-1]],
 		dim
 	]
-]
+];
 
 
 $elfenTypes={
@@ -781,7 +783,7 @@ processElements[list_,startLine_Integer,type_Integer]:=Module[
 	{head,reordering}=type/.$elfenTypes;
 	
 	head[connectivity[[All,reordering]] ]
-]
+];
 
 
 getElements[list_]:=Module[
@@ -794,22 +796,23 @@ getElements[list_]:=Module[
 		processElements[list,#1,#2]&,
 		{startPositions,types}
 	]
-]
+];
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Main function*)
 
 
-Options[importElfenMesh]=
-	Options[ImportMesh];
+Options[importElfenMesh]=Options[ImportMesh];
+
 $importMeshFormats["mes", "Elements"]=
 	{
 		"MeshElements",
 		"MeshNodes"
 		};
+		
 importElfenMesh[list_List, opts:OptionsPattern[]]:=Module[
-	{nodes,markers,allElements,ret=OptionValue["ReturnElement"]},
+	{nodes,allElements,ret=OptionValue["ReturnElement"]},
 	
 	nodes=getNodes[list];
 	If[ret==="MeshNodes", Return[nodes]];
@@ -817,7 +820,7 @@ importElfenMesh[list_List, opts:OptionsPattern[]]:=Module[
 	If[ret==="MeshElements", Return[allElements]];
 	
 	convertToElementMesh[nodes,allElements]
-]
+];
 
 
 importElfenMesh[file:_String?FileExistsQ|_InputStream, opts:OptionsPattern[]]:=
@@ -837,17 +840,11 @@ importElfenMesh[str_String, opts:OptionsPattern[]]:=
 End[]; (* "`Elfen`" *)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Register converters*)
 
 
-(* ::Text:: *)
-(*Provide converters for the different mesh types defined*)
-
-
-$importRegistered//Clear
-
-
+(* Provide converters for the different mesh types defined. *)
 If[!TrueQ@$importRegistered,
 	KeyValueMap[
 		Function[
@@ -886,10 +883,11 @@ If[!TrueQ@$importRegistered,
 		];
 	ImportExport`RegisterImport["ElementMesh", ImportMesh]
 	];
-$importRegistered=True
+	
+$importRegistered=True;
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*End package*)
 
 
