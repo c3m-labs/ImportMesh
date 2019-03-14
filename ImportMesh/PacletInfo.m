@@ -4,7 +4,7 @@
 (* BuildNumber and Internal values should be inserted during build procedure. *)
 Paclet[
 	Name -> "ImportMesh",
-	Version -> "0.3.2",
+	Version -> "0.3.3",
 	WolframVersion -> "11.+",
     Description -> "Utilities for importing FEM meshes from other software.",
     Creator -> "Matevz Pintar",
