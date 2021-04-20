@@ -1,5 +1,9 @@
 # ImportMesh
 
+__This package is obsolete.__
+__Its functionality, with additional upgrades, is now included in__
+__[FEMAddOns](https://github.com/WolframResearch/FEMAddOns) from Wolfram Research.__
+
 Utilities for importing FEM meshes to Mathematica. Currently supported file formats:
 
 - .inp ([Abaqus](https://www.3ds.com/products-services/simulia/products/abaqus/))
